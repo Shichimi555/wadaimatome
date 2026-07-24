@@ -1,0 +1,50 @@
+---
+// src/pages/tags/[tag]/[...page].astro
+import type { GetStaticPaths } from 'astro';
+import { getCollection } from 'astro:content';
+import Base from '../../../layouts/Base.astro';
+import ArticleCard from '../../../components/ArticleCard.astro';
+import AdSlot from '../../../components/AdSlot.astro';
+import Pagination from '../../../components/Pagination.astro';
+
+export const getStaticPaths = (async ({ paginate }) => {
+  const articles = await getCollection('articles');
+  const tags = [...new Set(articles.flatMap((a) => a.data.tags))];
+
+  return tags.flatMap((tag) => {
+    const filtered = articles
+      .filter((a) => a.data.tags.includes(tag))
+      .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+    return paginate(filtered, {
+      params: { tag },
+      pageSize: 20,
+    });
+  });
+}) satisfies GetStaticPaths;
+
+const { tag } = Astro.params;
+const { page } = Astro.props;
+---
+
+<Base title={`「${tag}」の記事一覧`} description={`${tag}に関する話題まとめ記事の一覧`}>
+  <h1 class="mb-6 text-xl font-bold">「{tag}」の記事</h1>
+
+  <AdSlot position="header" />
+
+  <div class="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+    {page.data.map((article, i) => (
+      <>
+        <ArticleCard
+          title={article.data.title}
+          description={article.data.description}
+          pubDate={article.data.pubDate}
+          tags={article.data.tags}
+          slug={article.id}
+        />
+        {(i + 1) % 4 === 0 && <AdSlot position="feed" />}
+      </>
+    ))}
+  </div>
+
+  <Pagination currentPage={page.currentPage} lastPage={page.lastPage} basePath={`/tags/${tag}`} />
+</Base>
