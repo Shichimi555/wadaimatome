@@ -3,7 +3,8 @@ import { join } from 'path';
 import type { GeneratedArticle } from './article';
 
 export function toSlug(keyword: string, date: Date): string {
-  const dateStr = date.toISOString().slice(0, 10);
+  const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  const dateStr = jst.toISOString().slice(0, 10);
   const slug = keyword
     .replace(/[\s　]+/g, '-')
     .replace(/[^\w　-鿿゠-ヿ぀-ゟ＀-￯-]/g, '')
