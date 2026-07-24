@@ -6,7 +6,6 @@ tags: ["サッカー","マンチェスター・ユナイテッド","ローゼン
 trendKeyword: "rosenborg vs man united"
 trafficVolume: 500
 heroImage: "https://encrypted-tbn2.gstatic.com/images?q=tbn:ANd9GcQ-RQVUNiyFdPSILVRCD2ldmADEuyjlFMXmJm8Y3BinFWP74KSUa0Gl8Jsn6Yg"
-draft: true
 ---
 
 ## 試合前の状況
