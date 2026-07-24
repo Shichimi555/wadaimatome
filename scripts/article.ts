@@ -42,12 +42,15 @@ ${newsContext ? `関連ニュース:\n${newsContext}` : ''}
     contents: prompt,
     config: {
       tools: [{ googleSearch: {} }],
-      responseMimeType: 'application/json',
     },
   });
 
   const text = response.text ?? '';
-  const parsed = JSON.parse(text);
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error(`No JSON found in Gemini response: ${text.slice(0, 200)}`);
+  }
+  const parsed = JSON.parse(jsonMatch[0]);
 
   if (
     typeof parsed.title !== 'string' ||
