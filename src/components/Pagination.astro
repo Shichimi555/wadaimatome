@@ -1,0 +1,39 @@
+---
+// src/components/Pagination.astro
+interface Props {
+  currentPage: number;
+  lastPage: number;
+  basePath?: string;
+}
+
+const { currentPage, lastPage, basePath = '' } = Astro.props;
+
+function pageUrl(page: number): string {
+  if (page === 1) return basePath || '/';
+  return `${basePath}/${page}`;
+}
+---
+
+{lastPage > 1 && (
+  <nav class="mt-12 flex items-center justify-center gap-4 text-sm">
+    {currentPage > 1 ? (
+      <a href={pageUrl(currentPage - 1)} class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
+        &larr; 前のページ
+      </a>
+    ) : (
+      <span class="text-zinc-300 dark:text-zinc-700">&larr; 前のページ</span>
+    )}
+
+    <span class="text-zinc-500 dark:text-zinc-400">
+      {currentPage} / {lastPage}
+    </span>
+
+    {currentPage < lastPage ? (
+      <a href={pageUrl(currentPage + 1)} class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
+        次のページ &rarr;
+      </a>
+    ) : (
+      <span class="text-zinc-300 dark:text-zinc-700">次のページ &rarr;</span>
+    )}
+  </nav>
+)}

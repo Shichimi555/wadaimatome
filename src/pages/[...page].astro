@@ -1,0 +1,40 @@
+---
+// src/pages/[...page].astro
+import type { GetStaticPaths } from 'astro';
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import ArticleCard from '../components/ArticleCard.astro';
+import AdSlot from '../components/AdSlot.astro';
+import Pagination from '../components/Pagination.astro';
+
+export const getStaticPaths = (async ({ paginate }) => {
+  const articles = await getCollection('articles');
+  const sorted = articles.sort(
+    (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+  );
+  return paginate(sorted, { pageSize: 20 });
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.props;
+---
+
+<Base title="最新の話題" description="ネットで話題のトレンドをまとめてお届け">
+  <AdSlot position="header" />
+
+  <div class="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+    {page.data.map((article, i) => (
+      <>
+        <ArticleCard
+          title={article.data.title}
+          description={article.data.description}
+          pubDate={article.data.pubDate}
+          tags={article.data.tags}
+          slug={article.id}
+        />
+        {(i + 1) % 4 === 0 && <AdSlot position="feed" />}
+      </>
+    ))}
+  </div>
+
+  <Pagination currentPage={page.currentPage} lastPage={page.lastPage} />
+</Base>
