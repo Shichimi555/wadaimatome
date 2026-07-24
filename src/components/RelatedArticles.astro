@@ -1,0 +1,39 @@
+---
+// src/components/RelatedArticles.astro
+import { getCollection } from 'astro:content';
+
+interface Props {
+  currentSlug: string;
+  tags: string[];
+  limit?: number;
+}
+
+const { currentSlug, tags, limit = 3 } = Astro.props;
+
+const allArticles = await getCollection('articles');
+const related = allArticles
+  .filter((a) => a.id !== currentSlug)
+  .map((a) => ({
+    article: a,
+    score: a.data.tags.filter((t: string) => tags.includes(t)).length,
+  }))
+  .filter((r) => r.score > 0)
+  .sort((a, b) => b.score - a.score || b.article.data.pubDate.valueOf() - a.article.data.pubDate.valueOf())
+  .slice(0, limit)
+  .map((r) => r.article);
+---
+
+{related.length > 0 && (
+  <aside class="mt-12 border-t border-zinc-200 pt-8 dark:border-zinc-800">
+    <h2 class="mb-4 text-lg font-bold">関連記事</h2>
+    <ul class="space-y-3">
+      {related.map((a) => (
+        <li>
+          <a href={`/articles/${a.id}`} class="text-zinc-700 underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900 dark:text-zinc-300 dark:decoration-zinc-700 dark:hover:text-zinc-100">
+            {a.data.title}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </aside>
+)}
