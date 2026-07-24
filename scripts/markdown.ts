@@ -1,0 +1,41 @@
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import type { GeneratedArticle } from './article';
+
+export function toSlug(keyword: string, date: Date): string {
+  const dateStr = date.toISOString().slice(0, 10);
+  const slug = keyword
+    .replace(/[\s　]+/g, '-')
+    .replace(/[^\w　-鿿゠-ヿ぀-ゟ＀-￯-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+  return `${dateStr}-${slug}`;
+}
+
+export function toMarkdown(article: GeneratedArticle): string {
+  const escapedTitle = article.title.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const escapedDesc = article.description.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const escapedKeyword = article.trendKeyword.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const tags = JSON.stringify(article.tags);
+
+  return `---
+title: "${escapedTitle}"
+description: "${escapedDesc}"
+pubDate: ${article.pubDate}
+tags: ${tags}
+trendKeyword: "${escapedKeyword}"
+trafficVolume: ${article.trafficVolume}
+---
+
+${article.body}
+`;
+}
+
+export async function writeArticle(article: GeneratedArticle, dir: string): Promise<string> {
+  await mkdir(dir, { recursive: true });
+  const slug = toSlug(article.trendKeyword, new Date(article.pubDate));
+  const filePath = join(dir, `${slug}.md`);
+  await writeFile(filePath, toMarkdown(article), 'utf-8');
+  return filePath;
+}
