@@ -10,7 +10,7 @@ interface Props {
 
 const { currentSlug, tags, limit = 3 } = Astro.props;
 
-const allArticles = await getCollection('articles');
+const allArticles = await getCollection('articles', ({ data }) => data.draft !== true);
 const related = allArticles
   .filter((a) => a.id !== currentSlug)
   .map((a) => ({

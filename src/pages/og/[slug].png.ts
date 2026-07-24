@@ -5,7 +5,7 @@ import satori from 'satori';
 import sharp from 'sharp';
 
 export const getStaticPaths: GetStaticPaths = async () => {
-  const articles = await getCollection('articles');
+  const articles = await getCollection('articles', ({ data }) => data.draft !== true);
   return articles.map((article) => ({
     params: { slug: article.id },
     props: { title: article.data.title },
