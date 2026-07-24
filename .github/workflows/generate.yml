@@ -25,6 +25,7 @@ jobs:
         run: npm run generate
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
 
       - name: Commit and push if changed
         run: |

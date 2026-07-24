@@ -40,10 +40,10 @@ ${body}
 `;
 }
 
-export async function writeArticle(article: GeneratedArticle, dir: string): Promise<string> {
+export async function writeArticle(article: GeneratedArticle, dir: string, options?: { draft?: boolean }): Promise<string> {
   await mkdir(dir, { recursive: true });
   const slug = toSlug(article.trendKeyword, new Date(article.pubDate));
   const filePath = join(dir, `${slug}.md`);
-  await writeFile(filePath, toMarkdown(article), 'utf-8');
+  await writeFile(filePath, toMarkdown(article, options), 'utf-8');
   return filePath;
 }
