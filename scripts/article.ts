@@ -49,6 +49,15 @@ ${newsContext ? `関連ニュース:\n${newsContext}` : ''}
   const text = response.text ?? '';
   const parsed = JSON.parse(text);
 
+  if (
+    typeof parsed.title !== 'string' ||
+    typeof parsed.description !== 'string' ||
+    typeof parsed.body !== 'string' ||
+    !Array.isArray(parsed.tags)
+  ) {
+    throw new Error(`Invalid response shape from Gemini: ${Object.keys(parsed).join(', ')}`);
+  }
+
   const now = new Date();
   const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
   const pubDate = jst.toISOString().replace('Z', '+09:00');

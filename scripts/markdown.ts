@@ -14,11 +14,16 @@ export function toSlug(keyword: string, date: Date): string {
   return `${dateStr}-${slug}`;
 }
 
+function sanitizeBody(body: string): string {
+  return body.replace(/<\s*\/?\s*(script|iframe|object|embed|form|input|button|style|link|meta|base)\b[^>]*>/gi, '');
+}
+
 export function toMarkdown(article: GeneratedArticle): string {
   const escapedTitle = article.title.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const escapedDesc = article.description.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const escapedKeyword = article.trendKeyword.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const tags = JSON.stringify(article.tags);
+  const body = sanitizeBody(article.body);
 
   return `---
 title: "${escapedTitle}"
@@ -29,7 +34,7 @@ trendKeyword: "${escapedKeyword}"
 trafficVolume: ${article.trafficVolume}
 ---
 
-${article.body}
+${body}
 `;
 }
 
