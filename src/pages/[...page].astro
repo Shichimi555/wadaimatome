@@ -30,6 +30,7 @@ const { page } = Astro.props;
           pubDate={article.data.pubDate}
           tags={article.data.tags}
           slug={article.id}
+          heroImage={article.data.heroImage}
         />
         {(i + 1) % 4 === 0 && <AdSlot position="feed" />}
       </>

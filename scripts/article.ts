@@ -9,6 +9,7 @@ export interface GeneratedArticle {
   trendKeyword: string;
   trafficVolume: number;
   pubDate: string;
+  heroImage: string;
 }
 
 export async function generateArticle(trend: TrendItem): Promise<GeneratedArticle> {
@@ -65,6 +66,11 @@ ${newsContext ? `関連ニュース:\n${newsContext}` : ''}
   const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
   const pubDate = jst.toISOString().replace('Z', '+09:00');
 
+  const heroImage =
+    trend.picture ||
+    trend.newsItems.find((n) => n.picture)?.picture ||
+    '';
+
   return {
     title: parsed.title,
     description: parsed.description,
@@ -73,5 +79,6 @@ ${newsContext ? `関連ニュース:\n${newsContext}` : ''}
     trendKeyword: trend.title,
     trafficVolume: trend.traffic,
     pubDate,
+    heroImage,
   };
 }

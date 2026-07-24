@@ -4,9 +4,9 @@ import type { TrendItem } from '../trends';
 
 describe('filterNewTrends', () => {
   const trends: TrendItem[] = [
-    { title: '新しい話題', traffic: 100000, newsItems: [] },
-    { title: '既存の話題', traffic: 50000, newsItems: [] },
-    { title: '古い話題', traffic: 30000, newsItems: [] },
+    { title: '新しい話題', traffic: 100000, picture: '', newsItems: [] },
+    { title: '既存の話題', traffic: 50000, picture: '', newsItems: [] },
+    { title: '古い話題', traffic: 30000, picture: '', newsItems: [] },
   ];
 
   it('should filter out trends that already have recent articles', () => {

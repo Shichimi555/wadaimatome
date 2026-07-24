@@ -10,6 +10,7 @@ const articles = defineCollection({
     tags: z.array(z.string()),
     trendKeyword: z.string(),
     trafficVolume: z.number(),
+    heroImage: z.string().optional(),
   }),
 });
 

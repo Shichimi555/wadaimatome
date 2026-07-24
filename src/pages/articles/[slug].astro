@@ -34,6 +34,19 @@ const ogImage = `/og/${article.id}.png`;
       </div>
     </header>
 
+    {article.data.heroImage && (
+      <div class="mb-6 overflow-hidden rounded-lg">
+        <img
+          src={article.data.heroImage}
+          alt={article.data.title}
+          class="w-full object-cover"
+          loading="eager"
+          decoding="async"
+          onerror="this.parentElement.style.display='none'"
+        />
+      </div>
+    )}
+
     <AdSlot position="article-top" />
 
     <div class="prose prose-zinc dark:prose-invert max-w-none article-body">

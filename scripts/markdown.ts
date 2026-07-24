@@ -24,6 +24,7 @@ export function toMarkdown(article: GeneratedArticle): string {
   const escapedKeyword = article.trendKeyword.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
   const tags = JSON.stringify(article.tags);
   const body = sanitizeBody(article.body);
+  const heroLine = article.heroImage ? `\nheroImage: "${article.heroImage}"` : '';
 
   return `---
 title: "${escapedTitle}"
@@ -31,7 +32,7 @@ description: "${escapedDesc}"
 pubDate: ${article.pubDate}
 tags: ${tags}
 trendKeyword: "${escapedKeyword}"
-trafficVolume: ${article.trafficVolume}
+trafficVolume: ${article.trafficVolume}${heroLine}
 ---
 
 ${body}

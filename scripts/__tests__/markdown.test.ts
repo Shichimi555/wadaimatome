@@ -26,12 +26,29 @@ describe('toMarkdown', () => {
       trendKeyword: 'テスト',
       trafficVolume: 10000,
       pubDate: '2026-07-24T15:00:00+09:00',
+      heroImage: 'https://example.com/hero.jpg',
     };
     const md = toMarkdown(article);
     expect(md).toContain('title: "テスト記事"');
     expect(md).toContain('tags: ["タグ1","タグ2"]');
+    expect(md).toContain('heroImage: "https://example.com/hero.jpg"');
     expect(md).toContain('## 見出し');
     expect(md).toMatch(/^---\n/);
+  });
+
+  it('should omit heroImage when empty', () => {
+    const article: GeneratedArticle = {
+      title: 'タイトル',
+      description: 'desc',
+      body: 'body',
+      tags: [],
+      trendKeyword: 'kw',
+      trafficVolume: 0,
+      pubDate: '2026-07-24T15:00:00+09:00',
+      heroImage: '',
+    };
+    const md = toMarkdown(article);
+    expect(md).not.toContain('heroImage');
   });
 
   it('should escape double quotes in title', () => {
@@ -43,6 +60,7 @@ describe('toMarkdown', () => {
       trendKeyword: 'kw',
       trafficVolume: 0,
       pubDate: '2026-07-24T15:00:00+09:00',
+      heroImage: '',
     };
     const md = toMarkdown(article);
     expect(md).not.toContain('title: "テスト"引用"タイトル"');

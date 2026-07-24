@@ -3,7 +3,8 @@ import { XMLParser } from 'fast-xml-parser';
 export interface TrendItem {
   title: string;
   traffic: number;
-  newsItems: { title: string; url: string }[];
+  picture: string;
+  newsItems: { title: string; url: string; picture: string }[];
 }
 
 export function parseTrendsXml(xml: string): TrendItem[] {
@@ -19,6 +20,7 @@ export function parseTrendsXml(xml: string): TrendItem[] {
     .map((item: any) => ({
       title: item.title ?? '',
       traffic: parseTraffic(item['ht:approx_traffic'] ?? '0'),
+      picture: String(item['ht:picture'] ?? '').trim(),
       newsItems: parseNewsItems(item['ht:news_item']),
     }))
     .sort((a: TrendItem, b: TrendItem) => b.traffic - a.traffic);
@@ -28,12 +30,13 @@ function parseTraffic(raw: string): number {
   return parseInt(String(raw).replace(/[^0-9]/g, ''), 10) || 0;
 }
 
-function parseNewsItems(raw: any): { title: string; url: string }[] {
+function parseNewsItems(raw: any): { title: string; url: string; picture: string }[] {
   if (!raw) return [];
   const items = Array.isArray(raw) ? raw : [raw];
   return items.map((n: any) => ({
     title: n['ht:news_item_title'] ?? '',
     url: n['ht:news_item_url'] ?? '',
+    picture: String(n['ht:news_item_picture'] ?? '').trim(),
   }));
 }
 
