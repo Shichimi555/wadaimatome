@@ -66,4 +66,34 @@ describe('toMarkdown', () => {
     expect(md).not.toContain('title: "テスト"引用"タイトル"');
     expect(md).toContain('title: "テスト\\"引用\\"タイトル"');
   });
+
+  it('should include draft: true when draft option is set', () => {
+    const article: GeneratedArticle = {
+      title: 'ドラフト記事',
+      description: 'desc',
+      body: 'body',
+      tags: ['tag'],
+      trendKeyword: 'kw',
+      trafficVolume: 100,
+      pubDate: '2026-07-25T12:00:00+09:00',
+      heroImage: '',
+    };
+    const md = toMarkdown(article, { draft: true });
+    expect(md).toContain('draft: true');
+  });
+
+  it('should not include draft line when draft option is false or omitted', () => {
+    const article: GeneratedArticle = {
+      title: 'タイトル',
+      description: 'desc',
+      body: 'body',
+      tags: [],
+      trendKeyword: 'kw',
+      trafficVolume: 0,
+      pubDate: '2026-07-25T12:00:00+09:00',
+      heroImage: '',
+    };
+    expect(toMarkdown(article)).not.toContain('draft');
+    expect(toMarkdown(article, { draft: false })).not.toContain('draft');
+  });
 });

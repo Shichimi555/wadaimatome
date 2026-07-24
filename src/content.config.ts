@@ -11,6 +11,7 @@ const articles = defineCollection({
     trendKeyword: z.string(),
     trafficVolume: z.number(),
     heroImage: z.string().optional(),
+    draft: z.boolean().optional(),
   }),
 });
 
