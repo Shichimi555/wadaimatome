@@ -1,5 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import type { TrendItem } from './trends';
+import { fetchOgImage } from './ogimage';
 
 export interface GeneratedArticle {
   title: string;
@@ -66,10 +67,19 @@ ${newsContext ? `関連ニュース:\n${newsContext}` : ''}
   const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
   const pubDate = jst.toISOString().replace('Z', '+09:00');
 
-  const heroImage =
-    trend.picture ||
-    trend.newsItems.find((n) => n.picture)?.picture ||
-    '';
+  let heroImage = '';
+  for (const news of trend.newsItems) {
+    if (news.url) {
+      heroImage = await fetchOgImage(news.url);
+      if (heroImage) break;
+    }
+  }
+  if (!heroImage) {
+    heroImage =
+      trend.picture ||
+      trend.newsItems.find((n) => n.picture)?.picture ||
+      '';
+  }
 
   return {
     title: parsed.title,

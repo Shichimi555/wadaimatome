@@ -13,15 +13,15 @@ const { title, description, pubDate, tags, slug, heroImage } = Astro.props;
 ---
 
 <article class="py-5">
-  <a href={`/articles/${slug}`} class="flex gap-4">
+  <div class="flex gap-4">
     <div class="min-w-0 flex-1">
       <time class="text-xs text-zinc-500 dark:text-zinc-400" datetime={pubDate.toISOString()}>
         {pubDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', timeZone: 'Asia/Tokyo' })}
       </time>
       <h2 class="mt-1">
-        <span class="text-lg font-bold leading-snug text-zinc-900 group-hover:underline dark:text-zinc-100">
+        <a href={`/articles/${slug}`} class="text-lg font-bold leading-snug text-zinc-900 hover:underline dark:text-zinc-100">
           {title}
-        </span>
+        </a>
       </h2>
       <p class="mt-1 text-sm text-zinc-600 line-clamp-2 dark:text-zinc-400">{description}</p>
       <div class="mt-2 flex flex-wrap gap-1.5">
@@ -33,7 +33,7 @@ const { title, description, pubDate, tags, slug, heroImage } = Astro.props;
       </div>
     </div>
     {heroImage && (
-      <div class="hidden shrink-0 sm:block">
+      <a href={`/articles/${slug}`} class="hidden shrink-0 self-center sm:block">
         <img
           src={heroImage}
           alt=""
@@ -42,7 +42,7 @@ const { title, description, pubDate, tags, slug, heroImage } = Astro.props;
           decoding="async"
           onerror="this.parentElement.style.display='none'"
         />
-      </div>
+      </a>
     )}
-  </a>
+  </div>
 </article>
