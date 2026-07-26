@@ -6,7 +6,6 @@ tags: ["アメリカンフットボール","アイルランド","NFL","スポー
 trendKeyword: "american football"
 trafficVolume: 500
 heroImage: "https://www.carlow-nationalist.ie/cms_media/module_img/7721/3860847_1_articledetail_3510661-e1784620981439.jpg"
-draft: true
 ---
 
 ## アイルランドで加速するアメリカンフットボール人気
