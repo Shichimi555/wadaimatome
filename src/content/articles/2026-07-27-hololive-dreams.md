@@ -6,7 +6,6 @@ tags: ["hololive Dreams","ホロドリ","カバー株式会社","VTuber","スマ
 trendKeyword: "hololive dreams"
 trafficVolume: 2000
 heroImage: "https://article-image-ix.nikkei.com/https%3A%2F%2Fimgix-proxy.n8s.jp%2FDSXZQO3362385027072026000000-1.jpg?auto=compress&amp;bg=FFFF&amp;crop=focalpoint&amp;fit=crop&amp;fm=jpg&amp;h=630&amp;w=1200&amp;s=87fcddbce32636a0924bd2526a69d22a"
-draft: true
 ---
 
 ## 「hololive Dreams」が社会現象に
