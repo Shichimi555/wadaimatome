@@ -6,7 +6,6 @@ tags: ["インドネシア代表","AFFカップ2026","サッカー","ミッチ�
 trendKeyword: "klasemen timnas indonesia vs tim nasional sepak bola kamboja"
 trafficVolume: 1000
 heroImage: "https://thumb.viva.co.id/media/frontend/thumbs3/2026/07/27/6a67823360f3a-timnas-indonesia-vs-kamboja_gemini_1265_711.jpg"
-draft: true
 ---
 
 ## AFFカップ2026 グループA初戦でインドネシアがカンボジアに5-1で勝利
