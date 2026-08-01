@@ -6,7 +6,6 @@ tags: ["TOKYO MER","劇場版TOKYO MER","Capital Crisis","熊本地震","イベ�
 trendKeyword: "劇場版tokyo mer 走る緊急救命室 capital crisis"
 trafficVolume: 1000
 heroImage: "https://img.topics.smt.news.goo.ne.jp/picture/smartflash/m_smartflash-421930.jpg"
-draft: true
 ---
 
 ## 『TOKYO MER』最新作、公開記念イベントが熊本地震の影響で中止に
