@@ -6,7 +6,6 @@ tags: ["VCT Pacific","VALORANT","eスポーツ","Challengers Japan","釜山"]
 trendKeyword: "vct pacific"
 trafficVolume: 200
 heroImage: "https://static.cryptobriefing.com/wp-content/uploads/2026/07/31102035/global-esports-keeps-winning-in-vct-pacific-as-esports-indus-800x420.png"
-draft: true
 ---
 
 ## VCT Pacific 2026 Stage 2 決勝、釜山で開催！
