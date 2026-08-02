@@ -6,7 +6,6 @@ tags: ["ベトナム天気","大雨注意","台風情報","熱帯低気圧","天
 trendKeyword: "thời tiết ngày mai"
 trafficVolume: 500
 heroImage: "https://cdn.24h.com.vn/upload/3-2026/images/2026-08-02/1785631692-423-thumbnail-width740height495_anh_cat_3_2-auto-crop-watermark.jpg"
-draft: true
 ---
 
 ## 北部で大雨、数日続く見込み
