@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import type { TrendItem } from './trends';
 import { fetchOgImage } from './ogimage';
+import { fetchTweets, formatTweetsMarkdown } from './tweets';
 
 export interface GeneratedArticle {
   title: string;
@@ -81,10 +82,18 @@ ${newsContext ? `関連ニュース:\n${newsContext}` : ''}
       '';
   }
 
+  let body: string = parsed.body;
+  const tweets = await fetchTweets(trend.title);
+  if (tweets.length > 0) {
+    const tweetsSection = formatTweetsMarkdown(tweets);
+    body = body.replace(/## ネットの反応[\s\S]*?(?=## |$)/, '');
+    body = body.trimEnd() + '\n\n' + tweetsSection;
+  }
+
   return {
     title: parsed.title,
     description: parsed.description,
-    body: parsed.body,
+    body,
     tags: parsed.tags,
     trendKeyword: trend.title,
     trafficVolume: trend.traffic,
