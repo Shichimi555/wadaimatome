@@ -16,14 +16,6 @@ heroImage: "https://static.cryptobriefing.com/wp-content/uploads/2026/07/3110203
 
 VCT Pacificの舞台では、日本代表のQT DIG∞ VALORANT Divisionが「VALORANT Challengers Japan 2026」で初優勝を飾り、VCT Pacific Stage 2への進出を決めました。これは、日本のeスポーツシーンにとって大きなニュースであり、彼らの今後の活躍が期待されます。また、eスポーツ業界全体として、仮想通貨（クリプト）との連携も注目されており、Global EsportsはVCT Pacific Stage 2で連勝を重ねるなど、その勢いは増すばかりです。Top4チームがChampions Shanghaiへの出場権を獲得するため、各チームの戦略とパフォーマンスから目が離せません。
 
-## ネットの反応
-
-「ついにVCT Pacificの決勝が釜山で開催！チケット取れるかな？」
-「QT DIG∞おめでとう！Stage 2も頑張ってほしい！」
-「Global Esportsの勢いが止まらない！クリプトとの連携も楽しみ」
-「釜山の会場、すごく綺麗そう！絶対行きたい！」
-「日本チームの活躍に期待！Stage 2も応援してる！」
-
 ## まとめ
 
 VCT Pacific 2026 Stage 2は、地域を代表する強豪チームが集結し、世界大会への切符をかけた熱い戦いが繰り広げられます。日本チームQT DIG∞の躍進や、Global Esportsのような勢いのあるチームの活躍、そしてeスポーツとクリプトの融合といったトレンドにも注目が集まっています。9月4日から6日に釜山で開催されるグランドファイナルに向けて、チケット争奪戦も予想されます。eスポーツファンならずとも、この興奮と感動を共有できるイベントとなるでしょう。
