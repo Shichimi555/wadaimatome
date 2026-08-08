@@ -1,2 +1,202 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+/* Embedded tweet cards rendered from the Markdown body (see scripts/tweets.ts).
+   Two-class selectors so they win over the prose typography defaults. */
+.tweet-embeds {
+  display: grid;
+  /* minmax(0, 1fr) so long display names/handles can't widen the track */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.tweet-embeds .tweet-embed {
+  display: block;
+  min-width: 0;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--color-zinc-200);
+  border-radius: 0.875rem;
+  background-color: var(--color-white);
+  color: inherit;
+  font-weight: 400;
+  text-decoration: none;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+
+.tweet-embeds .tweet-embed:hover {
+  border-color: var(--color-zinc-300);
+  background-color: var(--color-zinc-50);
+}
+
+.tweet-embeds .tweet-embed__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.tweet-embeds .tweet-embed__avatar {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0;
+  border-radius: 9999px;
+  object-fit: cover;
+  background-color: var(--color-zinc-100);
+}
+
+.tweet-embeds .tweet-embed__author {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.tweet-embeds .tweet-embed__name,
+.tweet-embeds .tweet-embed__handle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tweet-embeds .tweet-embed__name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.tweet-embeds .tweet-embed__handle {
+  font-size: 0.8125rem;
+  color: var(--color-zinc-500);
+}
+
+.tweet-embeds .tweet-embed__logo {
+  flex: none;
+  width: 1.0625rem;
+  height: 1.0625rem;
+  fill: currentColor;
+  opacity: 0.6;
+}
+
+.tweet-embeds .tweet-embed__text {
+  display: block;
+  margin-top: 0.625rem;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.tweet-embeds .tweet-embed__media {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  margin-top: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--color-zinc-200);
+  border-radius: 0.75rem;
+}
+
+.tweet-embeds .tweet-embed__media[data-count='1'] {
+  grid-template-columns: 1fr;
+}
+
+/* 2 side-by-side tiles would be a 90px-tall letterbox at 16/9; square them up */
+.tweet-embeds .tweet-embed__media[data-count='2'] .tweet-embed__media-item {
+  aspect-ratio: 1 / 1;
+}
+
+/* 3 items: the first spans both rows of the left column */
+.tweet-embeds .tweet-embed__media[data-count='3'] .tweet-embed__media-item:first-child {
+  grid-row: span 2;
+  aspect-ratio: 8 / 9;
+}
+
+.tweet-embeds .tweet-embed__media-item {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background-color: var(--color-zinc-100);
+  aspect-ratio: 16 / 9;
+}
+
+.tweet-embeds .tweet-embed__media-item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  object-fit: cover;
+}
+
+.tweet-embeds .tweet-embed__media[data-count='1'] .tweet-embed__media-item {
+  aspect-ratio: auto;
+}
+
+.tweet-embeds .tweet-embed__media[data-count='1'] .tweet-embed__media-item img {
+  height: auto;
+  max-height: 30rem;
+  object-fit: contain;
+}
+
+.tweet-embeds .tweet-embed__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3rem;
+  height: 3rem;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.4));
+}
+
+.tweet-embeds .tweet-embed__play circle {
+  fill: rgb(0 0 0 / 0.55);
+}
+
+.tweet-embeds .tweet-embed__play path {
+  fill: #fff;
+}
+
+.tweet-embeds .tweet-embed__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--color-zinc-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.tweet-embeds .tweet-embed__stats {
+  display: flex;
+  gap: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tweet-embeds .tweet-embed {
+    border-color: var(--color-zinc-800);
+    background-color: var(--color-zinc-900);
+  }
+
+  .tweet-embeds .tweet-embed:hover {
+    border-color: var(--color-zinc-700);
+    background-color: var(--color-zinc-800);
+  }
+
+  .tweet-embeds .tweet-embed__handle,
+  .tweet-embeds .tweet-embed__meta {
+    color: var(--color-zinc-400);
+  }
+
+  .tweet-embeds .tweet-embed__avatar,
+  .tweet-embeds .tweet-embed__media-item {
+    background-color: var(--color-zinc-800);
+  }
+
+  .tweet-embeds .tweet-embed__media {
+    border-color: var(--color-zinc-800);
+  }
+}

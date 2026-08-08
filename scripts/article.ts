@@ -1,7 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import type { TrendItem } from './trends';
 import { fetchOgImage } from './ogimage';
-import { fetchTweets, formatTweetsMarkdown } from './tweets';
+import { fetchTweets, formatTweetsHtml } from './tweets';
 
 export interface GeneratedArticle {
   title: string;
@@ -36,7 +36,9 @@ ${newsContext ? `関連ニュース:\n${newsContext}` : ''}
 
 注意:
 - 各セクションは200〜300文字
-- 「ネットの反応」や「まとめ」セクションを含める
+- 「まとめ」セクションを含める
+- 「ネットの反応」セクションは書かないこと（実際のSNS投稿を後から自動で差し込むため）
+- SNSの投稿内容を創作・引用しないこと
 - タグは3〜5個
 - bodyはMarkdown形式`;
 
@@ -82,12 +84,15 @@ ${newsContext ? `関連ニュース:\n${newsContext}` : ''}
       '';
   }
 
-  let body: string = parsed.body;
+  // Always drop any "ネットの反応" the model wrote: its quotes are invented.
+  // Real tweets are appended below when we manage to fetch them.
+  let body: string = parsed.body.replace(/## ネットの反応[\s\S]*?(?=## |$)/, '').trimEnd();
+
   const tweets = await fetchTweets(trend.title);
   if (tweets.length > 0) {
-    const tweetsSection = formatTweetsMarkdown(tweets);
-    body = body.replace(/## ネットの反応[\s\S]*?(?=## |$)/, '');
-    body = body.trimEnd() + '\n\n' + tweetsSection;
+    body = body + '\n\n' + formatTweetsHtml(tweets);
+  } else {
+    console.warn(`No tweets found for "${trend.title}"`);
   }
 
   return {

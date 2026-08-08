@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchTweets, formatTweetsMarkdown, type Tweet } from '../tweets';
+import {
+  fetchTweets,
+  formatTweetsHtml,
+  buildQueryCandidates,
+  parseMedia,
+  type Tweet,
+} from '../tweets';
 
 function buildNextDataHtml(entries: any[]): string {
   const data = {
@@ -121,29 +127,185 @@ describe('fetchTweets', () => {
   });
 });
 
-describe('formatTweetsMarkdown', () => {
-  it('should format tweets as blockquotes', () => {
-    const tweets: Tweet[] = [
-      {
-        id: '1',
-        text: 'テストツイート',
-        name: 'テストユーザー',
-        screenName: 'testuser',
-        url: 'https://x.com/testuser/status/1',
-        createdAt: 1700000000,
-        rtCount: 5,
-        likesCount: 10,
-      },
-    ];
+describe('buildQueryCandidates', () => {
+  it('should fall back to the head noun of an unspaced compound keyword', () => {
+    const candidates = buildQueryCandidates('ラグビー選手熱中症死亡');
 
-    const result = formatTweetsMarkdown(tweets);
+    expect(candidates[0]).toBe('ラグビー選手熱中症死亡');
+    expect(candidates).toContain('ラグビー');
+  });
+
+  it('should fall back to the first token of a spaced keyword', () => {
+    expect(buildQueryCandidates('東京エレクトロン 株価')).toEqual([
+      '東京エレクトロン 株価',
+      '東京エレクトロン',
+    ]);
+  });
+
+  it('should not produce fallbacks for a short simple keyword', () => {
+    expect(buildQueryCandidates('大谷翔平')).toEqual(['大谷翔平']);
+  });
+
+  it('should cap the number of candidates', () => {
+    expect(buildQueryCandidates('ラグビー選手熱中症死亡').length).toBeLessThanOrEqual(3);
+  });
+});
+
+describe('parseMedia', () => {
+  it('should map image media to its proxied URL and size', () => {
+    const media = parseMedia({
+      media: [
+        {
+          type: 'image',
+          item: {
+            mediaUrl: 'https://rts-pctr.c.yimg.jp/abc',
+            sizes: { viewer: { width: 900, height: 1200 } },
+          },
+        },
+      ],
+    });
+
+    expect(media).toEqual([
+      { type: 'image', url: 'https://rts-pctr.c.yimg.jp/abc', width: 900, height: 1200 },
+    ]);
+  });
+
+  it('should use the poster frame for videos, not the HLS stream', () => {
+    const media = parseMedia({
+      media: [
+        {
+          type: 'video',
+          item: {
+            mediaUrl: 'https://video.twimg.com/amplify_video/1/pl/x.m3u8',
+            thumbnailImageUrl: 'https://rts-pctr.c.yimg.jp/thumb',
+            sizes: { viewer: { width: 1200, height: 675 } },
+          },
+        },
+      ],
+    });
+
+    expect(media[0].type).toBe('video');
+    expect(media[0].url).toBe('https://rts-pctr.c.yimg.jp/thumb');
+  });
+
+  it('should use the thumbnail for youTube cards, never the watch URL', () => {
+    const media = parseMedia({
+      media: [
+        {
+          type: 'youTube',
+          item: {
+            mediaUrl: 'https://youtu.be/4veaaopZ7Ec?si=beZhz',
+            thumbnailImageUrl: 'https://img.youtube.com/vi/4veaaopZ7Ec/0.jpg',
+            sizes: { viewer: { width: 480, height: 360 } },
+          },
+        },
+      ],
+    });
+
+    expect(media).toEqual([
+      { type: 'video', url: 'https://img.youtube.com/vi/4veaaopZ7Ec/0.jpg', width: 480, height: 360 },
+    ]);
+  });
+
+  it('should drop media of an unknown type', () => {
+    expect(
+      parseMedia({ media: [{ type: 'card', item: { mediaUrl: 'https://example.com/page' } }] })
+    ).toEqual([]);
+  });
+
+  it('should drop media without a usable https URL and cap at 4', () => {
+    const entry = {
+      media: [
+        { type: 'image', item: {} },
+        { type: 'image', item: { mediaUrl: 'javascript:alert(1)' } },
+        ...Array.from({ length: 6 }, (_, i) => ({
+          type: 'image',
+          item: { mediaUrl: `https://rts-pctr.c.yimg.jp/${i}` },
+        })),
+      ],
+    };
+
+    expect(parseMedia(entry)).toHaveLength(4);
+  });
+
+  it('should return an empty array when there is no media', () => {
+    expect(parseMedia({})).toEqual([]);
+  });
+});
+
+describe('formatTweetsHtml', () => {
+  function makeTweet(overrides: Partial<Tweet> = {}): Tweet {
+    return {
+      id: '1',
+      text: 'テストツイート',
+      name: 'テストユーザー',
+      screenName: 'testuser',
+      avatar: 'https://rts-pctr.c.yimg.jp/avatar',
+      url: 'https://x.com/testuser/status/1',
+      createdAt: 1700000000,
+      rtCount: 5,
+      likesCount: 10,
+      media: [],
+      ...overrides,
+    };
+  }
+
+  it('should render the avatar and media images', () => {
+    const result = formatTweetsHtml([
+      makeTweet({
+        media: [
+          { type: 'image', url: 'https://rts-pctr.c.yimg.jp/a', width: 900, height: 1200 },
+          { type: 'video', url: 'https://rts-pctr.c.yimg.jp/b', width: 1200, height: 675 },
+        ],
+      }),
+    ]);
+
+    expect(result).toContain('tweet-embed__avatar');
+    expect(result).toContain('src="https://rts-pctr.c.yimg.jp/avatar"');
+    expect(result).toContain('data-count="2"');
+    expect(result).toContain('src="https://rts-pctr.c.yimg.jp/a"');
+    expect(result).toContain('width="900" height="1200"');
+    expect(result).toContain('tweet-embed__media-item--video');
+    expect(result).toContain('tweet-embed__play');
+    expect(result).toContain('loading="lazy"');
+  });
+
+  it('should omit the media block when a tweet has no media', () => {
+    expect(formatTweetsHtml([makeTweet()])).not.toContain('tweet-embed__media');
+  });
+
+  it('should render tweets as embed cards', () => {
+    const result = formatTweetsHtml([makeTweet()]);
 
     expect(result).toContain('## ネットの反応');
-    expect(result).toContain('> テストツイート');
+    expect(result).toContain('<div class="tweet-embeds">');
+    expect(result).toContain('href="https://x.com/testuser/status/1"');
+    expect(result).toContain('>テストツイート<');
     expect(result).toContain('@testuser');
+    expect(result).toContain('♡ 10');
+    expect(result).toContain('⇄ 5');
+    expect(result).not.toContain('> テストツイート');
+  });
+
+  it('should keep each card on a single line so Markdown does not reparse it', () => {
+    const result = formatTweetsHtml([makeTweet({ id: '1' }), makeTweet({ id: '2' })]);
+    const cardLines = result.split('\n').filter((l) => l.startsWith('<a class="tweet-embed"'));
+
+    expect(cardLines).toHaveLength(2);
+    expect(cardLines.every((l) => l.endsWith('</a>'))).toBe(true);
+  });
+
+  it('should escape HTML in tweet text and author fields', () => {
+    const result = formatTweetsHtml([
+      makeTweet({ text: '<script>alert("x")</script>', name: 'A & B "quoted"' }),
+    ]);
+
+    expect(result).not.toContain('<script>');
+    expect(result).toContain('&lt;script&gt;');
+    expect(result).toContain('A &amp; B &quot;quoted&quot;');
   });
 
   it('should return empty string when no tweets', () => {
-    expect(formatTweetsMarkdown([])).toBe('');
+    expect(formatTweetsHtml([])).toBe('');
   });
 });
