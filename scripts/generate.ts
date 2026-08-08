@@ -1,4 +1,4 @@
-import { fetchTrends } from './trends';
+import { fetchTrends, rankTrends, breakingWeight } from './trends';
 import { filterNewTrends, loadExistingArticles } from './dedup';
 import { generateArticle } from './article';
 import { writeArticle, toSlug } from './markdown';
@@ -17,7 +17,10 @@ async function main() {
   const newTrends = filterNewTrends(trends, existing);
   console.log(`${newTrends.length} new trends after dedup`);
 
-  const selected = newTrends.slice(0, MAX_ARTICLES);
+  const selected = rankTrends(newTrends).slice(0, MAX_ARTICLES);
+  for (const t of selected) {
+    console.log(`  picked: ${t.title} (traffic=${t.traffic}, weight=x${breakingWeight(t)})`);
+  }
   if (selected.length === 0) {
     console.log('No new trends to process');
     return;

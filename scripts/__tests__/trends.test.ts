@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseTrendsXml, type TrendItem } from '../trends';
+import { parseTrendsXml, breakingWeight, rankTrends, type TrendItem } from '../trends';
 
 const SAMPLE_RSS = `<?xml version="1.0" encoding="UTF-8"?>
 <rss xmlns:ht="https://trends.google.co.jp/trends/trendingsearches/daily" version="2.0">
@@ -65,5 +65,71 @@ describe('parseTrendsXml', () => {
     const items = parseTrendsXml(xml);
     expect(items[0].newsItems).toHaveLength(2);
     expect(items[0].newsItems.map((n) => n.title)).toEqual(['ニュースA', 'ニュースB']);
+  });
+});
+
+function makeTrend(overrides: Partial<TrendItem> = {}): TrendItem {
+  return {
+    title: 'キーワード',
+    traffic: 1000,
+    picture: '',
+    newsItems: [],
+    ...overrides,
+  };
+}
+
+describe('breakingWeight', () => {
+  it('should weight weather and disaster keywords highest', () => {
+    expect(breakingWeight(makeTrend({ title: 'ゲリラ豪雨' }))).toBe(3);
+    expect(breakingWeight(makeTrend({ title: '震度5強' }))).toBe(3);
+  });
+
+  it('should weight incidents and accidents highest', () => {
+    expect(breakingWeight(makeTrend({ title: '人身事故' }))).toBe(3);
+  });
+
+  it('should weight transport disruption above ordinary trends', () => {
+    expect(breakingWeight(makeTrend({ title: '中央線 運転見合わせ' }))).toBe(2);
+  });
+
+  it('should match against attached headlines, not just the keyword', () => {
+    const trend = makeTrend({
+      title: 'サイモニ・ブニランギ',
+      newsItems: [{ title: 'ラグビー選手が練習中の熱中症で死亡', url: '', picture: '' }],
+    });
+    expect(breakingWeight(trend)).toBe(3);
+  });
+
+  it('should return 1 for ordinary trends', () => {
+    expect(breakingWeight(makeTrend({ title: '新型ハリアー' }))).toBe(1);
+  });
+});
+
+describe('rankTrends', () => {
+  it('should put a breaking topic above a higher-traffic ordinary topic', () => {
+    const ranked = rankTrends([
+      makeTrend({ title: '人気アイドル', traffic: 20000 }),
+      makeTrend({ title: 'ゲリラ豪雨', traffic: 10000 }),
+    ]);
+
+    expect(ranked.map((t) => t.title)).toEqual(['ゲリラ豪雨', '人気アイドル']);
+  });
+
+  it('should still rank by traffic within the same weight', () => {
+    const ranked = rankTrends([
+      makeTrend({ title: '人身事故', traffic: 5000 }),
+      makeTrend({ title: '火災', traffic: 50000 }),
+    ]);
+
+    expect(ranked.map((t) => t.title)).toEqual(['火災', '人身事故']);
+  });
+
+  it('should not mutate the input array', () => {
+    const input = [
+      makeTrend({ title: 'ふつう', traffic: 20000 }),
+      makeTrend({ title: '地震', traffic: 10000 }),
+    ];
+    rankTrends(input);
+    expect(input[0].title).toBe('ふつう');
   });
 });
