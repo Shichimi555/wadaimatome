@@ -4,6 +4,7 @@ import {
   formatTweetsHtml,
   buildQueryCandidates,
   parseMedia,
+  snowflakeToUnix,
   type Tweet,
 } from '../tweets';
 
@@ -307,5 +308,20 @@ describe('formatTweetsHtml', () => {
 
   it('should return empty string when no tweets', () => {
     expect(formatTweetsHtml([])).toBe('');
+  });
+});
+
+describe('snowflakeToUnix', () => {
+  it('should decode the creation time from an X snowflake ID', () => {
+    // 2085905252323406314 was posted 2026-08-08 10:45 JST
+    const seconds = snowflakeToUnix('2085905252323406314');
+    const jst = new Date(seconds * 1000).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
+
+    expect(jst).toContain('2026/8/8');
+    expect(jst).toContain('10:45');
+  });
+
+  it('should return 0 for a non-numeric id', () => {
+    expect(snowflakeToUnix('not-an-id')).toBe(0);
   });
 });

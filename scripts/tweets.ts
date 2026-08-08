@@ -113,21 +113,60 @@ async function searchTweets(query: string, limit: number): Promise<Tweet[]> {
 
   return entries
     .filter((e) => !e.inReplyTo && !e.possiblySensitive)
-    .map((e) => ({
-      id: e.id,
-      text: cleanDisplayText(e.displayTextBody ?? e.displayText ?? ''),
-      name: e.name,
-      screenName: e.screenName,
-      avatar: typeof e.profileImage === 'string' ? e.profileImage : '',
-      url: `https://x.com/${e.screenName}/status/${e.id}`,
-      createdAt: e.createdAt,
-      rtCount: e.rtCount ?? 0,
-      likesCount: e.likesCount ?? 0,
-      media: parseMedia(e),
-    }))
+    .map(toTweet)
     .filter((t) => t.text.length > 0 || t.media.length > 0)
     .sort((a, b) => b.rtCount + b.likesCount - (a.rtCount + a.likesCount))
     .slice(0, limit);
+}
+
+function toTweet(entry: any): Tweet {
+  return {
+    id: entry.id,
+    text: cleanDisplayText(entry.displayTextBody ?? entry.displayText ?? ''),
+    name: entry.name,
+    screenName: entry.screenName,
+    avatar: typeof entry.profileImage === 'string' ? entry.profileImage : '',
+    url: `https://x.com/${entry.screenName}/status/${entry.id}`,
+    createdAt: entry.createdAt ?? snowflakeToUnix(entry.id),
+    rtCount: entry.rtCount ?? 0,
+    likesCount: entry.likesCount ?? 0,
+    media: parseMedia(entry),
+  };
+}
+
+/** X snowflake IDs encode their creation time. */
+export function snowflakeToUnix(id: string): number {
+  try {
+    return Number((BigInt(id) >> 22n) + 1288834974657n) / 1000;
+  } catch {
+    return 0;
+  }
+}
+
+/** Looks a single tweet up by ID via Yahoo Realtime's detail page. */
+export async function fetchTweetById(id: string): Promise<Tweet | null> {
+  try {
+    const res = await fetch(
+      `https://search.yahoo.co.jp/realtime/search/tweet/${encodeURIComponent(id)}?detail=1&ifr=tl_twdtl&rkf=1`,
+      {
+        headers: { 'User-Agent': USER_AGENT, 'Accept-Language': 'ja,en-US;q=0.7,en;q=0.3' },
+        signal: AbortSignal.timeout(10000),
+      }
+    );
+    if (!res.ok) return null;
+
+    const match = (await res.text()).match(
+      /__NEXT_DATA__[^>]*type="application\/json">({.*?})<\/script>/
+    );
+    if (!match) return null;
+
+    const best = JSON.parse(match[1])?.props?.pageProps?.pageData?.bestTweet;
+    if (!best || best.id !== id || !best.screenName) return null;
+
+    return toTweet(best);
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchTweets(keyword: string, limit = 5): Promise<Tweet[]> {
