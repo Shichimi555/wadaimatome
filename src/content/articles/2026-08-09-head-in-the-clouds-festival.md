@@ -6,7 +6,6 @@ tags: ["KATSEYE","Head in the Clouds","ソフィア・ラフォルテザ","メ�
 trendKeyword: "head in the clouds festival"
 trafficVolume: 2000
 heroImage: "https://ichef.bbci.co.uk/news/1024/branded_news/b7e5/live/2f52b920-929c-11f1-b6aa-e1ff997f01b8.jpg"
-draft: true
 ---
 
 ## 「Head in the Clouds」フェス直前にKATSEYEリーダーが活動休止を発表
