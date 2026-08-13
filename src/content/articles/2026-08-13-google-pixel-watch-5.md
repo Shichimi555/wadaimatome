@@ -6,7 +6,6 @@ tags: ["Google Pixel Watch 5","スマートウォッチ","AI","健康管理","�
 trendKeyword: "google pixel watch 5"
 trafficVolume: 2000
 heroImage: "https://www.watch.impress.co.jp/img/ipw/list/2132/375/00.JPG"
-draft: true
 ---
 
 ## Pixel Watch 5：AI機能と健康管理がさらに進化
