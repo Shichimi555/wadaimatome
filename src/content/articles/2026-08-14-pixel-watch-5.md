@@ -6,7 +6,6 @@ tags: ["Pixel Watch 5","Google","スマートウォッチ","AI","ヘルスケア
 trendKeyword: "pixel watch 5"
 trafficVolume: 1000
 heroImage: "https://image.itmedia.co.jp/pcuser/articles/2608/13/cover_news051.jpg"
-draft: true
 ---
 
 ## Pixel Watch 5：AI機能とヘルスケアがさらに進化
