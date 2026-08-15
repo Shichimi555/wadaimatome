@@ -6,7 +6,6 @@ tags: ["Google Tensor","Pixel 11","スマートフォン","AI","新製品"]
 trendKeyword: "google tensor"
 trafficVolume: 2000
 heroImage: "https://helios-i.mashable.com/imagery/articles/01C69B33GoGbQ5FTbUKWLgi/hero-image.fill.size_1200x675.v1786742310.jpg"
-draft: true
 ---
 
 ## Google Tensor G6搭載！Pixel 11シリーズ発表
