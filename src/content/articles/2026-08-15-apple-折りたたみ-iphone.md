@@ -6,7 +6,6 @@ tags: ["Apple","iPhone","折りたたみスマホ","ガジェット","テック"
 trendKeyword: "apple 折りたたみ iphone"
 trafficVolume: 2000
 heroImage: "https://s.yimg.jp/images/news-web/versions/20260814-e8c6ee7/all/images/ogp_default.png"
-draft: true
 ---
 
 ## 折りたたみスマホ市場へのApple参入に期待高まる
