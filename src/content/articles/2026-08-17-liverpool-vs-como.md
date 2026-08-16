@@ -6,7 +6,6 @@ tags: ["リバプール","コモ","サッカー","プレシーズンマッチ","
 trendKeyword: "liverpool vs como"
 trafficVolume: 200
 heroImage: "https://images2.minutemediacdn.com/image/upload/c_crop,x_0,y_217,w_4690,h_2638/c_fill,w_1440,ar_1440:810,f_auto,q_auto,g_auto/images/GettyImages/mmsport/sports_illustrated_ftbol/01m03s9wn67yxfea413b.jpg"
-draft: true
 ---
 
 ## プレシーズン最終戦、コモ相手に勝利
