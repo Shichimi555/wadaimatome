@@ -31,9 +31,16 @@ const ogImageURL = ogImage ? new URL(ogImage, Astro.site).href : undefined;
     {ogImageURL && <meta property="og:image" content={ogImageURL} />}
 
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@wadaiimatome" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     {ogImageURL && <meta name="twitter:image" content={ogImageURL} />}
+
+    <script
+      is:inline
+      async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2472916845268460"
+      crossorigin="anonymous"></script>
   </head>
   <body class="min-h-screen bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
     <Header />
