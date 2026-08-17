@@ -2,7 +2,6 @@
 // src/pages/articles/[slug].astro
 import { getCollection, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
-import AdSlot from '../../components/AdSlot.astro';
 import RelatedArticles from '../../components/RelatedArticles.astro';
 
 export async function getStaticPaths() {
@@ -47,30 +46,10 @@ const ogImage = `/og/${article.id}.png`;
       </div>
     )}
 
-    <AdSlot position="article-top" />
-
     <div class="prose prose-zinc dark:prose-invert max-w-none article-body">
       <Content />
     </div>
-
-    <AdSlot position="article-bottom" />
   </article>
 
   <RelatedArticles currentSlug={article.id} tags={article.data.tags} />
-
-  <AdSlot position="footer" />
-
-  <script>
-    const body = document.querySelector('.article-body');
-    if (body) {
-      const headings = body.querySelectorAll('h2');
-      if (headings.length >= 2) {
-        const ad = document.createElement('div');
-        ad.className = 'ad-slot my-6 flex items-center justify-center rounded bg-zinc-100 dark:bg-zinc-900';
-        ad.dataset.adPosition = 'article-mid';
-        ad.innerHTML = '<div class="px-4 py-8 text-center text-xs text-zinc-400 dark:text-zinc-600">広告スペース (article-mid)</div>';
-        headings[1].before(ad);
-      }
-    }
-  </script>
 </Base>
