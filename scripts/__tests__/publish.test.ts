@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { removeDraftFlag, buildTweetSuggestion, articleUrl, rankForTweeting } from '../publish';
+import { removeDraftFlag, buildTweetSuggestion, articleUrl } from '../publish';
 
 describe('removeDraftFlag', () => {
   it('should remove draft: true line from frontmatter', () => {
@@ -64,37 +64,3 @@ describe('articleUrl', () => {
   });
 });
 
-describe('rankForTweeting', () => {
-  const article = (slug: string, title: string, tags: string[] = []) => ({
-    slug,
-    title,
-    description: '',
-    tags,
-  });
-
-  it('should put breaking news ahead of everything else', () => {
-    const ranked = rankForTweeting([
-      article('a', '新作フィギュア発売'),
-      article('b', '東海道線で人身事故'),
-      article('c', 'ドラマ最新話の感想'),
-    ]);
-
-    expect(ranked[0].slug).toBe('b');
-  });
-
-  it('should score the description and tags too', () => {
-    const ranked = rankForTweeting([
-      article('a', 'よくある話'),
-      { slug: 'b', title: '天気の話', description: '', tags: ['豪雨'] },
-    ]);
-
-    expect(ranked[0].slug).toBe('b');
-  });
-
-  it('should not mutate the input', () => {
-    const input = [article('a', '平常'), article('b', '火災発生')];
-    rankForTweeting(input);
-
-    expect(input.map((a) => a.slug)).toEqual(['a', 'b']);
-  });
-});

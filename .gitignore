@@ -22,3 +22,7 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# X session cookies (secret) and local posting history
+*cookies*.txt
+data/tweet-history.json

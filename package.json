@@ -12,7 +12,8 @@
     "astro": "astro",
     "generate": "tsx scripts/generate.ts",
     "publish-drafts": "tsx scripts/publish.ts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "tweet": "tsx scripts/tweet.ts"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.3",
@@ -26,6 +27,7 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
+    "playwright": "^1.58.2",
     "tsx": "^4.23.1",
     "vitest": "^4.1.10"
   }

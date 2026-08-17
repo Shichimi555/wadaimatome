@@ -2,22 +2,9 @@ import { readdir, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { pathToFileURL } from 'node:url';
 import { sendDiscordNotification } from './notify';
-import { breakingWeightOfText } from './trends';
-import { buildTweet, postTweet, readCredentials } from './x';
-import {
-  DEFAULT_MONTHLY_LIMIT,
-  dailyAllowance,
-  jstDay,
-  readQuota,
-  recordPost,
-  rollOver,
-  writeQuota,
-} from './quota';
 
 const ARTICLES_DIR = './src/content/articles';
-const QUOTA_PATH = './data/x-quota.json';
 const SITE_URL = process.env.SITE_URL || 'https://wadaimatome.com';
-const MONTHLY_LIMIT = Number(process.env.X_MONTHLY_LIMIT) || DEFAULT_MONTHLY_LIMIT;
 
 export function removeDraftFlag(content: string): string | null {
   if (!/^draft:\s*true\s*$/m.test(content)) return null;
@@ -49,13 +36,6 @@ interface PublishedArticle {
  */
 export function articleUrl(slug: string, siteUrl = SITE_URL): string {
   return `${siteUrl}/articles/${encodeURIComponent(slug)}/`;
-}
-
-/** Most newsworthy first, so a capped run tweets the articles that matter. */
-export function rankForTweeting(articles: PublishedArticle[]): PublishedArticle[] {
-  const score = (a: PublishedArticle) =>
-    breakingWeightOfText([a.title, a.description, ...a.tags].join(' '));
-  return [...articles].sort((a, b) => score(b) - score(a));
 }
 
 function extractFrontmatter(content: string, field: string): string {
@@ -128,52 +108,7 @@ async function main() {
     console.log('Discord publish notification sent');
   }
 
-  await tweetPublished(published);
-
   console.log('Done');
-}
-
-async function tweetPublished(published: PublishedArticle[]): Promise<void> {
-  const creds = readCredentials();
-  if (!creds) {
-    console.log('X credentials not set, skipping auto-tweet');
-    return;
-  }
-
-  const today = jstDay();
-  let state = rollOver(await readQuota(QUOTA_PATH), today);
-  let allowance = dailyAllowance(state, today, MONTHLY_LIMIT);
-  let posted = 0;
-  console.log(
-    `X quota: ${allowance} post(s) allowed today (month ${state.monthCount}/${MONTHLY_LIMIT})`
-  );
-
-  for (const article of rankForTweeting(published)) {
-    if (allowance <= 0) {
-      console.log(`X quota exhausted, not tweeting: ${article.slug}`);
-      continue;
-    }
-
-    const text = buildTweet({
-      title: article.title,
-      description: article.description,
-      url: articleUrl(article.slug),
-      tags: article.tags,
-    });
-
-    const id = await postTweet(text, creds);
-    if (id === null) {
-      console.error(`Failed to tweet: ${article.slug}`);
-      continue;
-    }
-
-    state = recordPost(state, today);
-    allowance--;
-    posted++;
-    console.log(`Tweeted ${article.slug} -> https://x.com/wadaiimatome/status/${id}`);
-  }
-
-  if (posted > 0) await writeQuota(QUOTA_PATH, state);
 }
 
 // Only publish when run as a script: importing this module for its helpers
