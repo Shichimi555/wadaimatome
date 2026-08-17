@@ -6,7 +6,6 @@ tags: ["Marvel's Wolverine","PS5","Insomniac Games","アクションアドベン
 trendKeyword: "marvel's wolverine [ps5]"
 trafficVolume: 200
 heroImage: "https://image.news.livedoor.com/newsimage/stf/o/g/ogp_image_32073653_32192ced0940.jpg"
-draft: true
 ---
 
 ## 「Marvel's Wolverine」発売日決定！
