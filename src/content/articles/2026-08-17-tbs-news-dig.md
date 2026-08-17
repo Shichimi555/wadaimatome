@@ -6,7 +6,6 @@ tags: ["TBS NEWS DIG","長期金利","株価","経済","住友不動産"]
 trendKeyword: "tbs news dig"
 trafficVolume: 5000
 heroImage: "https://news-pctr.c.yimg.jp/t/news-topics/images/tpc/2026/8/17/f467210ae0074af14b25e207ee77e324c8efb3e543f7f10c21990a71c5a1caee.jpg"
-draft: true
 ---
 
 ## 長期金利、約30年ぶりの高水準に迫る
