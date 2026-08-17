@@ -16,6 +16,8 @@ const POST_BUTTON = '[data-testid="tweetButtonInline"], [data-testid="tweetButto
 export class SessionExpiredError extends Error {}
 export class WrongAccountError extends Error {}
 export class ComposeMismatchError extends Error {}
+export class PostRejectedError extends Error {}
+export class PostUnconfirmedError extends Error {}
 
 /** Draft.js keeps each line in its own block; that is where the text lives. */
 export const COMPOSER_BLOCKS = '[data-contents] > div';
@@ -145,17 +147,24 @@ export async function postTweet(text: string, options: PostOptions): Promise<str
     const postButton = page.locator(POST_BUTTON).first();
     await postButton.waitFor({ state: 'visible', timeout: 15000 });
 
-    // The button stays disabled while X validates the draft.
-    await page
-      .waitForFunction(
-        (sel) => {
+    // X leaves the button disabled when it will not accept the draft -- most
+    // often because it is over the character limit. Treating that as a
+    // transient wait means clicking a dead button and calling it a success.
+    try {
+      await page.waitForFunction(
+        (sel: string) => {
           const el = document.querySelector(sel);
           return el !== null && el.getAttribute('aria-disabled') !== 'true';
         },
         '[data-testid="tweetButtonInline"]',
         { timeout: 15000 }
-      )
-      .catch(() => {});
+      );
+    } catch {
+      throw new PostRejectedError(
+        'X kept the post button disabled, so it will not accept this draft. ' +
+          'Most likely the text is over the limit.'
+      );
+    }
 
     if (options.dryRun) {
       console.log(`[DRY RUN] Composer verified:\n${composed}`);
@@ -195,18 +204,43 @@ async function readComposerText(page: any): Promise<string> {
 }
 
 /**
- * X shows a "ポストを表示" / "View" toast linking to the new post. Reading it
- * back is the only confirmation available that the post really landed.
+ * Confirms the post actually landed and returns its URL when X offers one.
+ *
+ * The caller records history from this, so "probably fine" is not good enough:
+ * an unconfirmed post marked as sent means the article is never tweeted, and
+ * one marked as failed when it did send means it goes out twice. X gives two
+ * independent signals -- a toast linking to the new post, and the composer
+ * clearing -- so this requires at least one of them.
  */
 async function waitForPostedUrl(page: any): Promise<string> {
   try {
     const toastLink = page.locator('[data-testid="toast"] a[href*="/status/"]');
     await toastLink.waitFor({ state: 'attached', timeout: 30000 });
     const href = await toastLink.getAttribute('href');
-    return href ? new URL(href, 'https://x.com').href : '';
+    if (href) return new URL(href, 'https://x.com').href;
   } catch {
-    // The composer emptying is the fallback signal that it went through.
-    await page.waitForTimeout(5000);
-    return '';
+    // Fall through to the composer check.
   }
+
+  const cleared = await page
+    .waitForFunction(
+      ({ composer, blocks }: { composer: string; blocks: string }) => {
+        const el = document.querySelector(composer);
+        if (!el) return true;
+        return Array.from(el.querySelectorAll(blocks))
+          .every((b) => ((b as HTMLElement).textContent ?? '') === '');
+      },
+      { composer: COMPOSER, blocks: COMPOSER_BLOCKS },
+      { timeout: 15000 }
+    )
+    .then(() => true)
+    .catch(() => false);
+
+  if (!cleared) {
+    throw new PostUnconfirmedError(
+      'Clicked post but saw neither the confirmation toast nor the composer clearing. ' +
+        'Check the account before running again -- it may or may not have gone out.'
+    );
+  }
+  return '';
 }

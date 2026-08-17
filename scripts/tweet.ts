@@ -6,6 +6,8 @@ import { buildTweet } from './x';
 import {
   postTweet,
   ComposeMismatchError,
+  PostRejectedError,
+  PostUnconfirmedError,
   SessionExpiredError,
   WrongAccountError,
 } from './x-browser';
@@ -223,7 +225,13 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   main().catch((err) => {
-    if (err instanceof ComposeMismatchError) {
+    if (err instanceof PostUnconfirmedError) {
+      console.error(`[ERROR] ${err.message}`);
+      console.error('[ERROR] Not recorded as posted. Verify the account manually.');
+    } else if (err instanceof PostRejectedError) {
+      console.error(`[ERROR] ${err.message}`);
+      console.error('[ERROR] Nothing was posted.');
+    } else if (err instanceof ComposeMismatchError) {
       console.error(`[ERROR] ${err.message}`);
       console.error('[ERROR] Nothing was posted. The composer selectors probably changed.');
     } else if (err instanceof WrongAccountError) {

@@ -82,6 +82,18 @@ describe('buildTweet', () => {
     expect(tweet).not.toContain('#c');
   });
 
+  it('should stay within the limit for the longest real article seen', () => {
+    const tweet = buildTweet({
+      title: '横浜高校野球部元監督の渡辺元智氏が死去',
+      description:
+        '横浜高校野球部元監督の渡辺元智氏が死去。甲子園春夏通算27回出場、5度の優勝を誇り、松坂大輔氏ら数多くのスター選手を育てた名将の訃報に、球界に衝撃が走っています。',
+      url: 'https://wadaimatome.com/articles/2026-08-17-%E6%B8%A1%E8%BE%BA%E5%85%83%E6%99%BA/',
+      tags: ['渡辺元智', '高校野球'],
+    });
+
+    expect(weightedLength(tweet)).toBeLessThanOrEqual(TWEET_LIMIT);
+  });
+
   it('should fall back to the title when there is no description', () => {
     expect(buildTweet({ ...base, description: '  ' })).toContain('タイトル');
   });
