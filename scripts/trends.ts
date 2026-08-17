@@ -71,11 +71,17 @@ export const BREAKING_CATEGORIES: { weight: number; words: string[] }[] = [
   },
 ];
 
-/** Highest matching category weight for a blob of text (1 when nothing matches). */
-export function breakingWeightOfText(haystack: string): number {
+/**
+ * Highest matching category weight for a blob of text (1 when nothing matches).
+ * `ignoreWords` drops keywords that are too loose for the caller's purpose.
+ */
+export function breakingWeightOfText(haystack: string, ignoreWords: string[] = []): number {
   let weight = 1;
   for (const category of BREAKING_CATEGORIES) {
-    if (category.weight > weight && category.words.some((w) => haystack.includes(w))) {
+    const words = ignoreWords.length
+      ? category.words.filter((w) => !ignoreWords.includes(w))
+      : category.words;
+    if (category.weight > weight && words.some((w) => haystack.includes(w))) {
       weight = category.weight;
     }
   }

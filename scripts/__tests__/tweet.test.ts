@@ -86,6 +86,23 @@ describe('breakingScore', () => {
   it('should look at tags as well as the title', () => {
     expect(breakingScore(article({ tags: ['地震'] }))).toBe(3);
   });
+
+  it('should ignore the description, which is model-written copy', () => {
+    expect(breakingScore(article({ description: '大雨による事故で死亡' }))).toBe(1);
+  });
+
+  it('should not treat "速報" or "緊急" as evidence of breaking news', () => {
+    expect(breakingScore(article({ title: '【速報】ドジャース戦の結果' }))).toBe(1);
+    expect(breakingScore(article({ title: '緊急企画！夏の特集' }))).toBe(1);
+  });
+
+  it('should not read 打線爆発 as an explosion', () => {
+    expect(breakingScore(article({ title: 'マーリンズ打線爆発で逆転勝利' }))).toBe(1);
+  });
+
+  it('should still catch a real explosion', () => {
+    expect(breakingScore(article({ title: '工場で爆発事故' }))).toBe(3);
+  });
 });
 
 describe('selectArticles', () => {
