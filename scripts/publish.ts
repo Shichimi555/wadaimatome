@@ -3,7 +3,7 @@ import { join } from 'path';
 import { sendDiscordNotification } from './notify';
 
 const ARTICLES_DIR = './src/content/articles';
-const SITE_URL = process.env.SITE_URL || 'https://wadaimatome.shichimi.workers.dev';
+const SITE_URL = process.env.SITE_URL || 'https://wadaimatome.com';
 
 export function removeDraftFlag(content: string): string | null {
   if (!/^draft:\s*true\s*$/m.test(content)) return null;
