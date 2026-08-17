@@ -26,3 +26,4 @@ pnpm-debug.log*
 # X session cookies (secret) and local posting history
 *cookies*.txt
 data/tweet-history.json
+tweet.log*
