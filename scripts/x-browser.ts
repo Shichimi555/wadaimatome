@@ -15,6 +15,10 @@ const POST_BUTTON = '[data-testid="tweetButtonInline"], [data-testid="tweetButto
 
 export class SessionExpiredError extends Error {}
 export class WrongAccountError extends Error {}
+export class ComposeMismatchError extends Error {}
+
+/** Draft.js keeps each line in its own block; that is where the text lives. */
+export const COMPOSER_BLOCKS = '[data-contents] > div';
 
 /** Pulls the @handle out of the sidebar account switcher's text. */
 export function extractHandle(text: string): string {
@@ -92,9 +96,11 @@ export interface PostOptions {
 export async function postTweet(text: string, options: PostOptions): Promise<string> {
   const cookies = loadCookies(options.cookiePath);
 
+  // Chromium, not Firefox: Firefox's contenteditable handling loses CJK text
+  // on every entry method that survives Draft.js.
   // Imported lazily so the module can be unit tested without a browser.
-  const { firefox } = await import('playwright');
-  const browser = await firefox.launch({ headless: options.headless ?? true });
+  const { chromium } = await import('playwright');
+  const browser = await chromium.launch({ headless: options.headless ?? true });
   const context = await browser.newContext({
     locale: 'ja-JP',
     timezoneId: 'Asia/Tokyo',
@@ -124,7 +130,17 @@ export async function postTweet(text: string, options: PostOptions): Promise<str
     await composer.waitFor({ state: 'visible', timeout: 60000 });
     await composer.click({ force: true });
 
-    await typeWithNewlines(page, text);
+    await composer.fill(text);
+
+    // Verify before clicking anything. document.execCommand('insertText'),
+    // which the implementation this was ported from uses, gets applied twice
+    // by Draft.js in both Firefox and Chromium and silently doubles the body.
+    const composed = await readComposerText(page);
+    if (composed !== text) {
+      throw new ComposeMismatchError(
+        `Composer holds different text than intended.\n--- intended ---\n${text}\n--- composer ---\n${composed}`
+      );
+    }
 
     const postButton = page.locator(POST_BUTTON).first();
     await postButton.waitFor({ state: 'visible', timeout: 15000 });
@@ -142,8 +158,7 @@ export async function postTweet(text: string, options: PostOptions): Promise<str
       .catch(() => {});
 
     if (options.dryRun) {
-      const composed = await composer.innerText();
-      console.log(`[DRY RUN] Composed:\n${composed}`);
+      console.log(`[DRY RUN] Composer verified:\n${composed}`);
       console.log('[DRY RUN] Not posting.');
       return '';
     }
@@ -165,24 +180,18 @@ async function readActiveHandle(page: any): Promise<string> {
   }
 }
 
-/** execCommand does not insert newlines, so they are pressed as Enter. */
-async function typeWithNewlines(page: any, text: string): Promise<void> {
-  const lines = text.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i]) {
-      await page.evaluate(
-        ({ sel, value }: { sel: string; value: string }) => {
-          const el = document.querySelector(sel) as HTMLElement | null;
-          if (el) {
-            el.focus();
-            document.execCommand('insertText', false, value);
-          }
-        },
-        { sel: COMPOSER, value: lines[i] }
-      );
-    }
-    if (i < lines.length - 1) await page.keyboard.press('Enter');
-  }
+/** Reads the composer back the way Draft.js stores it: one block per line. */
+async function readComposerText(page: any): Promise<string> {
+  return page.evaluate(
+    ({ composer, blocks }: { composer: string; blocks: string }) => {
+      const el = document.querySelector(composer);
+      if (!el) return '';
+      return Array.from(el.querySelectorAll(blocks))
+        .map((b) => (b as HTMLElement).textContent ?? '')
+        .join('\n');
+    },
+    { composer: COMPOSER, blocks: COMPOSER_BLOCKS }
+  );
 }
 
 /**

@@ -3,7 +3,12 @@ import { join, dirname, resolve } from 'path';
 import { pathToFileURL } from 'node:url';
 import { breakingWeightOfText } from './trends';
 import { buildTweet } from './x';
-import { postTweet, SessionExpiredError, WrongAccountError } from './x-browser';
+import {
+  postTweet,
+  ComposeMismatchError,
+  SessionExpiredError,
+  WrongAccountError,
+} from './x-browser';
 
 const ARTICLES_DIR = './src/content/articles';
 const HISTORY_PATH = './data/tweet-history.json';
@@ -218,7 +223,10 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   main().catch((err) => {
-    if (err instanceof WrongAccountError) {
+    if (err instanceof ComposeMismatchError) {
+      console.error(`[ERROR] ${err.message}`);
+      console.error('[ERROR] Nothing was posted. The composer selectors probably changed.');
+    } else if (err instanceof WrongAccountError) {
       console.error(`[ERROR] ${err.message}`);
       console.error('[ERROR] Re-export the cookies from a browser signed in only as that account.');
     } else if (err instanceof SessionExpiredError) {

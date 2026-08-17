@@ -16,6 +16,7 @@ nvm use 22 >/dev/null || exit 1
 
 # playwright 1.58 は ubuntu26.04 を知らず 24.04 向けビルドで動かす
 # (popular-videos-ranking の tweet.sh と同じ理由)。
+# ブラウザは chromium を使う。firefox は contenteditable への日本語入力が通らない。
 export PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64
 
 cd "$(dirname "$0")" || exit 1
