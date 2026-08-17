@@ -71,12 +71,8 @@ export const BREAKING_CATEGORIES: { weight: number; words: string[] }[] = [
   },
 ];
 
-/**
- * Highest matching category weight for a trend (1 when nothing matches).
- * Matches the keyword itself and the headlines attached to it.
- */
-export function breakingWeight(trend: TrendItem): number {
-  const haystack = [trend.title, ...trend.newsItems.map((n) => n.title)].join(' ');
+/** Highest matching category weight for a blob of text (1 when nothing matches). */
+export function breakingWeightOfText(haystack: string): number {
   let weight = 1;
   for (const category of BREAKING_CATEGORIES) {
     if (category.weight > weight && category.words.some((w) => haystack.includes(w))) {
@@ -84,6 +80,16 @@ export function breakingWeight(trend: TrendItem): number {
     }
   }
   return weight;
+}
+
+/**
+ * Highest matching category weight for a trend (1 when nothing matches).
+ * Matches the keyword itself and the headlines attached to it.
+ */
+export function breakingWeight(trend: TrendItem): number {
+  return breakingWeightOfText(
+    [trend.title, ...trend.newsItems.map((n) => n.title)].join(' ')
+  );
 }
 
 /** Orders trends by breaking-news-weighted traffic, highest first. */
