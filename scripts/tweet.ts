@@ -3,7 +3,7 @@ import { join, dirname, resolve } from 'path';
 import { pathToFileURL } from 'node:url';
 import { breakingWeightOfText } from './trends';
 import { buildTweet } from './x';
-import { postTweet, SessionExpiredError } from './x-browser';
+import { postTweet, SessionExpiredError, WrongAccountError } from './x-browser';
 
 const ARTICLES_DIR = './src/content/articles';
 const HISTORY_PATH = './data/tweet-history.json';
@@ -203,7 +203,11 @@ async function main() {
       continue;
     }
 
-    const url = await postTweet(text, { cookiePath: cookiePath!, dryRun: dryRun === 'browser' });
+    const url = await postTweet(text, {
+      cookiePath: cookiePath!,
+      dryRun: dryRun === 'browser',
+      expectedHandle: process.env.X_HANDLE || 'wadaiimatome',
+    });
     if (dryRun) continue;
 
     history.posted.push({ slug: article.slug, at: now.toISOString(), url: url || undefined });
@@ -214,7 +218,10 @@ async function main() {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   main().catch((err) => {
-    if (err instanceof SessionExpiredError) {
+    if (err instanceof WrongAccountError) {
+      console.error(`[ERROR] ${err.message}`);
+      console.error('[ERROR] Re-export the cookies from a browser signed in only as that account.');
+    } else if (err instanceof SessionExpiredError) {
       console.error(`[ERROR] ${err.message}`);
       console.error('[ERROR] Re-export the X cookies and try again.');
     } else {

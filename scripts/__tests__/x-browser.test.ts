@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { parseNetscapeCookies, hasSessionCookies, loadCookies, SessionExpiredError } from '../x-browser';
+import {
+  parseNetscapeCookies,
+  hasSessionCookies,
+  loadCookies,
+  extractHandle,
+  SessionExpiredError,
+} from '../x-browser';
 
 const COOKIE_FILE = [
   '# Netscape HTTP Cookie File',
@@ -47,6 +53,20 @@ describe('hasSessionCookies', () => {
     const withoutAuth = COOKIE_FILE.split('\n').filter((l) => !l.includes('auth_token')).join('\n');
 
     expect(hasSessionCookies(parseNetscapeCookies(withoutAuth))).toBe(false);
+  });
+});
+
+describe('extractHandle', () => {
+  it('should read the handle out of the account switcher text', () => {
+    expect(extractHandle('話題まとめ\n@wadaiimatome')).toBe('wadaiimatome');
+  });
+
+  it('should return empty when there is no handle', () => {
+    expect(extractHandle('アカウント')).toBe('');
+  });
+
+  it('should not run past the 15 character handle limit', () => {
+    expect(extractHandle('@abcdefghijklmnopqrstuvwxyz')).toBe('abcdefghijklmno');
   });
 });
 

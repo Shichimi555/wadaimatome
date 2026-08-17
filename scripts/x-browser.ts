@@ -14,6 +14,13 @@ const COMPOSER = '[data-testid="tweetTextarea_0"]';
 const POST_BUTTON = '[data-testid="tweetButtonInline"], [data-testid="tweetButton"]';
 
 export class SessionExpiredError extends Error {}
+export class WrongAccountError extends Error {}
+
+/** Pulls the @handle out of the sidebar account switcher's text. */
+export function extractHandle(text: string): string {
+  const match = text.match(/@([A-Za-z0-9_]{1,15})/);
+  return match ? match[1] : '';
+}
 
 /**
  * Parses a Netscape cookies.txt export. Fields are:
@@ -70,6 +77,12 @@ export interface PostOptions {
   cookiePath: string;
   dryRun?: boolean;
   headless?: boolean;
+  /**
+   * Handle the session must belong to. Exports from a browser holding several
+   * logged-in accounts carry auth_multi, and X can open as the wrong one --
+   * posting this site's articles from an unrelated account.
+   */
+  expectedHandle?: string;
 }
 
 /**
@@ -97,6 +110,14 @@ export async function postTweet(text: string, options: PostOptions): Promise<str
 
     if (/\/(login|i\/flow)/.test(page.url())) {
       throw new SessionExpiredError('Redirected to login: the cookies are no longer valid.');
+    }
+
+    const handle = await readActiveHandle(page);
+    console.log(`[INFO] Signed in as @${handle || '(unknown)'}`);
+    if (options.expectedHandle && handle && handle.toLowerCase() !== options.expectedHandle.toLowerCase()) {
+      throw new WrongAccountError(
+        `Session is @${handle}, expected @${options.expectedHandle}. Refusing to post.`
+      );
     }
 
     const composer = page.locator(COMPOSER);
@@ -131,6 +152,16 @@ export async function postTweet(text: string, options: PostOptions): Promise<str
     return await waitForPostedUrl(page);
   } finally {
     await browser.close();
+  }
+}
+
+async function readActiveHandle(page: any): Promise<string> {
+  try {
+    const button = page.locator('[data-testid="SideNav_AccountSwitcher_Button"]');
+    await button.waitFor({ state: 'attached', timeout: 30000 });
+    return extractHandle(await button.innerText());
+  } catch {
+    return '';
   }
 }
 
