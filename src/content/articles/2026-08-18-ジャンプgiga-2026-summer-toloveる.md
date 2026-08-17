@@ -6,7 +6,6 @@ tags: ["To LOVEる","ジャンプGIGA","矢吹健太朗","新作読切","20周�
 trendKeyword: "ジャンプgiga 2026 summer toloveる"
 trafficVolume: 5000
 heroImage: "https://contents.oricon.co.jp/upimg/news/2474000/2473086/20260810_113636_p_o_41019023.jpg"
-draft: true
 ---
 
 ## 『To LOVEる』20周年記念！ジャンプGIGAに新作読切が登場
