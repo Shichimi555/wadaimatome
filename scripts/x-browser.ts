@@ -11,7 +11,7 @@ import type { Cookie } from 'playwright';
 
 const HOME_URL = 'https://x.com/home';
 const COMPOSER = '[data-testid="tweetTextarea_0"]';
-const POST_BUTTON = '[data-testid="tweetButtonInline"], [data-testid="tweetButton"]';
+const POST_BUTTON = '[data-testid="tweetButtonInline"]';
 
 export class SessionExpiredError extends Error {}
 export class WrongAccountError extends Error {}
@@ -144,7 +144,7 @@ export async function postTweet(text: string, options: PostOptions): Promise<str
       );
     }
 
-    const postButton = page.locator(POST_BUTTON).first();
+    const postButton = page.locator(POST_BUTTON);
     await postButton.waitFor({ state: 'visible', timeout: 15000 });
 
     // X leaves the button disabled when it will not accept the draft -- most
@@ -172,7 +172,15 @@ export async function postTweet(text: string, options: PostOptions): Promise<str
       return '';
     }
 
-    await postButton.click({ force: true });
+    // Playwright's own click does not work on this button: without force its
+    // actionability checks never pass and it times out, and with force it
+    // dispatches at coordinates that X's handler ignores -- which is why ten
+    // scheduled runs composed a post and then silently sent nothing. Calling
+    // click() on the element itself does fire X's handler.
+    await page.evaluate((sel: string) => {
+      (document.querySelector(sel) as HTMLElement | null)?.click();
+    }, POST_BUTTON);
+
     return await waitForPostedUrl(page);
   } finally {
     await browser.close();
