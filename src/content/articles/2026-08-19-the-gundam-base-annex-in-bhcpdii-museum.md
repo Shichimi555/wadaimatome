@@ -6,7 +6,6 @@ tags: ["ガンダム","ガンプラ","バンダイ","ホビー","ミュージア
 trendKeyword: "the gundam base annex in bhcpdii museum"
 trafficVolume: 200
 heroImage: "https://prcdn.freetls.fastly.net/release_image/28758/80/28758-80-8bd8a89ffaeff3d4c731ea2eca50509b-3307x1866.jpg?format=jpeg&amp;auto=webp&amp;fit=bounds&amp;width=2400&amp;height=1260"
-draft: true
 ---
 
 ## BHCPDII MUSEUMに新たなガンダムの聖地が誕生
