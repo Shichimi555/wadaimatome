@@ -6,7 +6,6 @@ tags: ["Snow Man","AMENITY","音楽","先行配信","岩本照","宮舘涼太"]
 trendKeyword: "snow man amenity"
 trafficVolume: 500
 heroImage: "https://newsatcl-pctr.c.yimg.jp/t/amd-img/20260824-00000018-mnet-000-1-view.jpg?exp=10800"
-draft: true
 ---
 
 ## Snow Man、6thアルバム「AMENITY」より9曲先行配信開始
