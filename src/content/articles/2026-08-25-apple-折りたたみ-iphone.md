@@ -6,7 +6,6 @@ tags: ["折りたたみiPhone","iPhone Ultra","iPhone Fold","Apple","iPhone 18 P
 trendKeyword: "apple 折りたたみ iphone"
 trafficVolume: 1000
 heroImage: "https://newsatcl-pctr.c.yimg.jp/t/amd-img/20260824-00000014-giz-000-1-view.jpg?exp=10800"
-draft: true
 ---
 
 ## Apple初の折りたたみiPhone、その全貌に迫る
