@@ -6,7 +6,6 @@ tags: ["ドリー・パートン","カントリーミュージック","訃報","
 trendKeyword: "dolly parton"
 trafficVolume: 500
 heroImage: "https://ichef.bbci.co.uk/ace/branded_news/1200/cpsprodpb/2270/live/27e9fb90-a0b0-11f1-8229-b91d73b62f74.jpg"
-draft: true
 ---
 
 ## 音楽界のレジェンド、ドリー・パートンさん死去
