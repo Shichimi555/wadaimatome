@@ -53,6 +53,20 @@ const jsonLd =
     {jsonLd && <script type="application/ld+json" is:inline set:html={jsonLd} />}
 
     <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+
+    <!-- Google tag (gtag.js). is:inline keeps Astro from bundling it, which
+         would break the global gtag() the config call depends on. -->
+    <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-BTEMRTBR4Y"></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag('js', new Date());
+      gtag('config', 'G-BTEMRTBR4Y');
+    </script>
+
     <script
       is:inline
       async
