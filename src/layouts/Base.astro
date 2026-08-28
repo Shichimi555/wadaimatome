@@ -8,11 +8,22 @@ interface Props {
   title: string;
   description: string;
   ogImage?: string;
+  /** 'article' only on article pages; listings are websites. */
+  ogType?: 'article' | 'website';
+  /** JSON-LD graph nodes for this page. */
+  schema?: unknown[];
 }
 
-const { title, description, ogImage } = Astro.props;
+const { title, description, ogImage, ogType = 'website', schema = [] } = Astro.props;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 const ogImageURL = ogImage ? new URL(ogImage, Astro.site).href : undefined;
+
+// Search Console reported 「検索での見え方」 as three impressions of a product
+// snippet and nothing else: the site emitted no structured data at all, so it
+// was eligible for no rich result. 94% of its impressions are mobile, where
+// the breadcrumb line replaces the raw URL.
+const jsonLd =
+  schema.length > 0 ? JSON.stringify({ '@context': 'https://schema.org', '@graph': schema }) : null;
 ---
 
 <!doctype html>
@@ -23,8 +34,11 @@ const ogImageURL = ogImage ? new URL(ogImage, Astro.site).href : undefined;
     <title>{title} | 話題まとめ</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalURL} />
+    <link rel="alternate" type="application/rss+xml" title="話題まとめ" href={new URL('/rss.xml', Astro.site)} />
 
-    <meta property="og:type" content="article" />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content="話題まとめ" />
+    <meta property="og:locale" content="ja_JP" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalURL} />
@@ -36,6 +50,9 @@ const ogImageURL = ogImage ? new URL(ogImage, Astro.site).href : undefined;
     <meta name="twitter:description" content={description} />
     {ogImageURL && <meta name="twitter:image" content={ogImageURL} />}
 
+    {jsonLd && <script type="application/ld+json" is:inline set:html={jsonLd} />}
+
+    <link rel="preconnect" href="https://pagead2.googlesyndication.com" />
     <script
       is:inline
       async

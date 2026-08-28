@@ -1,5 +1,8 @@
 ---
 // src/components/ArticleCard.astro
+import { articlePath, tagPath } from '../lib/urls';
+import { splitTags } from '../lib/tags';
+
 interface Props {
   title: string;
   description: string;
@@ -7,9 +10,13 @@ interface Props {
   tags: string[];
   slug: string;
   heroImage?: string;
+  /** How many articles each tag holds, so thin tags are not linked. */
+  tagCounts: Map<string, number>;
 }
 
-const { title, description, pubDate, tags, slug, heroImage } = Astro.props;
+const { title, description, pubDate, tags, slug, heroImage, tagCounts } = Astro.props;
+const href = articlePath(slug);
+const { linked } = splitTags(tags, tagCounts);
 ---
 
 <article class="py-5">
@@ -19,21 +26,21 @@ const { title, description, pubDate, tags, slug, heroImage } = Astro.props;
         {pubDate.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', timeZone: 'Asia/Tokyo' })}
       </time>
       <h2 class="mt-1">
-        <a href={`/articles/${slug}`} class="text-lg font-bold leading-snug text-zinc-900 hover:underline dark:text-zinc-100">
+        <a href={href} class="text-lg font-bold leading-snug text-zinc-900 hover:underline dark:text-zinc-100">
           {title}
         </a>
       </h2>
       <p class="mt-1 text-sm text-zinc-600 line-clamp-2 dark:text-zinc-400">{description}</p>
       <div class="mt-2 flex flex-wrap gap-1.5">
-        {tags.map((tag) => (
-          <a href={`/tags/${tag}`} class="rounded-sm bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-500 hover:text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200">
+        {linked.map((tag) => (
+          <a href={tagPath(tag)} class="rounded-sm bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-500 hover:text-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200">
             {tag}
           </a>
         ))}
       </div>
     </div>
     {heroImage && (
-      <a href={`/articles/${slug}`} class="hidden shrink-0 self-center sm:block">
+      <a href={href} class="hidden shrink-0 self-center sm:block" tabindex="-1" aria-hidden="true">
         <img
           src={heroImage}
           alt=""

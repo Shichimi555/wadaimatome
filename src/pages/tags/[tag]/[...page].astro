@@ -5,27 +5,52 @@ import { getCollection } from 'astro:content';
 import Base from '../../../layouts/Base.astro';
 import ArticleCard from '../../../components/ArticleCard.astro';
 import Pagination from '../../../components/Pagination.astro';
+import { tagPath } from '../../../lib/urls';
+import { countTags, indexableTags } from '../../../lib/tags';
 
 export const getStaticPaths = (async ({ paginate }) => {
   const articles = await getCollection('articles', ({ data }) => data.draft !== true);
-  const tags = [...new Set(articles.flatMap((a) => a.data.tags))];
+  const counts = countTags(articles);
 
-  return tags.flatMap((tag) => {
+  // Only tags that group something get a page; see lib/tags.ts.
+  return indexableTags(counts).flatMap((tag) => {
     const filtered = articles
       .filter((a) => a.data.tags.includes(tag))
       .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
     return paginate(filtered, {
       params: { tag },
       pageSize: 20,
+      props: { tagCounts: counts },
     });
   });
 }) satisfies GetStaticPaths;
 
 const { tag } = Astro.params;
-const { page } = Astro.props;
+const { page, tagCounts } = Astro.props;
+
+const site = Astro.site!.href.replace(/\/$/, '');
+const schema = [
+  {
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'ホーム', item: `${site}/` },
+      { '@type': 'ListItem', position: 2, name: tag },
+    ],
+  },
+];
 ---
 
-<Base title={`「${tag}」の記事一覧`} description={`${tag}に関する話題まとめ記事の一覧`}>
+<Base
+  title={`「${tag}」の記事一覧`}
+  description={`${tag}に関する話題まとめ記事${page.total}件の一覧。最新の動きを時系列でまとめています。`}
+  schema={schema}
+>
+  <nav aria-label="パンくずリスト" class="mb-4 text-xs text-zinc-500 dark:text-zinc-400">
+    <a href="/" class="hover:underline">ホーム</a>
+    <span class="mx-1">/</span>
+    <span>{tag}</span>
+  </nav>
+
   <h1 class="mb-6 text-xl font-bold">「{tag}」の記事</h1>
 
   <div class="divide-y divide-zinc-100 dark:divide-zinc-800/50">
@@ -37,9 +62,10 @@ const { page } = Astro.props;
         tags={article.data.tags}
         slug={article.id}
         heroImage={article.data.heroImage}
+        tagCounts={tagCounts}
       />
     ))}
   </div>
 
-  <Pagination currentPage={page.currentPage} lastPage={page.lastPage} basePath={`/tags/${tag}`} />
+  <Pagination currentPage={page.currentPage} lastPage={page.lastPage} basePath={tagPath(tag!)} />
 </Base>

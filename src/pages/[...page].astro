@@ -5,19 +5,48 @@ import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import ArticleCard from '../components/ArticleCard.astro';
 import Pagination from '../components/Pagination.astro';
+import { countTags } from '../lib/tags';
 
 export const getStaticPaths = (async ({ paginate }) => {
   const articles = await getCollection('articles', ({ data }) => data.draft !== true);
   const sorted = articles.sort(
     (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
   );
-  return paginate(sorted, { pageSize: 20 });
+  const tagCounts = countTags(articles);
+  return paginate(sorted, { pageSize: 20, props: { tagCounts } });
 }) satisfies GetStaticPaths;
 
-const { page } = Astro.props;
+const { page, tagCounts } = Astro.props;
+
+const site = Astro.site!.href.replace(/\/$/, '');
+// Only the first page describes the site itself; page 12 is not the homepage.
+const schema =
+  page.currentPage === 1
+    ? [
+        {
+          '@type': 'WebSite',
+          '@id': `${site}/#website`,
+          url: `${site}/`,
+          name: '話題まとめ',
+          description: 'ネットで話題のトレンドを毎日まとめてお届けするニュースサイト',
+          inLanguage: 'ja',
+          publisher: { '@type': 'Organization', name: '話題まとめ', url: `${site}/` },
+        },
+      ]
+    : [];
+
+const title = page.currentPage === 1 ? '最新の話題' : `最新の話題（${page.currentPage}ページ目）`;
+const description =
+  page.currentPage === 1
+    ? 'ネットで話題のトレンドを毎日まとめてお届け。ニュース・スポーツ・エンタメ・防災の最新の話題をコンパクトに。'
+    : `話題まとめの記事一覧 ${page.currentPage}ページ目。`;
 ---
 
-<Base title="最新の話題" description="ネットで話題のトレンドをまとめてお届け">
+<Base title={title} description={description} schema={schema}>
+  <h1 class="mb-6 text-xl font-bold">
+    {page.currentPage === 1 ? '最新の話題' : `最新の話題 ${page.currentPage}ページ目`}
+  </h1>
+
   <div class="divide-y divide-zinc-100 dark:divide-zinc-800/50">
     {page.data.map((article) => (
       <ArticleCard
@@ -27,6 +56,7 @@ const { page } = Astro.props;
         tags={article.data.tags}
         slug={article.id}
         heroImage={article.data.heroImage}
+        tagCounts={tagCounts}
       />
     ))}
   </div>

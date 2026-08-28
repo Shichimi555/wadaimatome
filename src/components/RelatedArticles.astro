@@ -1,6 +1,7 @@
 ---
 // src/components/RelatedArticles.astro
 import { getCollection } from 'astro:content';
+import { articlePath } from '../lib/urls';
 
 interface Props {
   currentSlug: string;
@@ -29,7 +30,7 @@ const related = allArticles
     <ul class="space-y-3">
       {related.map((a) => (
         <li>
-          <a href={`/articles/${a.id}`} class="text-zinc-700 underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900 dark:text-zinc-300 dark:decoration-zinc-700 dark:hover:text-zinc-100">
+          <a href={articlePath(a.id)} class="text-zinc-700 underline decoration-zinc-300 underline-offset-2 hover:text-zinc-900 dark:text-zinc-300 dark:decoration-zinc-700 dark:hover:text-zinc-100">
             {a.data.title}
           </a>
         </li>

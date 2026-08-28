@@ -1,23 +1,21 @@
 ---
 // src/components/Pagination.astro
+import { pagePath } from '../lib/urls';
+
 interface Props {
   currentPage: number;
   lastPage: number;
+  /** Already-encoded base path ending in a slash, e.g. '/tags/%E5%9C%B0%E9%9C%87/'. */
   basePath?: string;
 }
 
-const { currentPage, lastPage, basePath = '' } = Astro.props;
-
-function pageUrl(page: number): string {
-  if (page === 1) return basePath || '/';
-  return `${basePath}/${page}`;
-}
+const { currentPage, lastPage, basePath = '/' } = Astro.props;
 ---
 
 {lastPage > 1 && (
   <nav class="mt-12 flex items-center justify-center gap-4 text-sm">
     {currentPage > 1 ? (
-      <a href={pageUrl(currentPage - 1)} class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
+      <a rel="prev" href={pagePath(basePath, currentPage - 1)} class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
         &larr; 前のページ
       </a>
     ) : (
@@ -29,7 +27,7 @@ function pageUrl(page: number): string {
     </span>
 
     {currentPage < lastPage ? (
-      <a href={pageUrl(currentPage + 1)} class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
+      <a rel="next" href={pagePath(basePath, currentPage + 1)} class="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100">
         次のページ &rarr;
       </a>
     ) : (
