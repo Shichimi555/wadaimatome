@@ -27,3 +27,8 @@ pnpm-debug.log*
 *cookies*.txt
 data/tweet-history.json
 tweet.log*
+
+# Search Console exports
+*-Coverage-*.zip
+*-Performance-on-Search-*.zip
+*:Zone.Identifier
