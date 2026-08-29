@@ -3,6 +3,8 @@
 import { getCollection, render } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import RelatedArticles from '../../components/RelatedArticles.astro';
+import AdMax from '../../components/AdMax.astro';
+import { AD_SLOTS, MOBILE_MEDIA } from '../../lib/ads';
 import { articlePath, tagPath } from '../../lib/urls';
 import { breadcrumbTag, countTags, splitTags } from '../../lib/tags';
 
@@ -108,6 +110,15 @@ const schema = [
       <Content />
     </div>
   </article>
+
+  <AdMax
+    slotId={AD_SLOTS.mobileInline}
+    media={MOBILE_MEDIA}
+    width={320}
+    height={100}
+    label
+    class="mt-8 md:hidden"
+  />
 
   <RelatedArticles currentSlug={article.id} tags={article.data.tags} />
 </Base>
