@@ -6,7 +6,6 @@ tags: ["iPhone 18 Pro","Apple","折りたたみスマホ","新製品発表会","
 trendKeyword: "apple iphone 18 pro"
 trafficVolume: 200
 heroImage: "https://media.loom-app.com/loom/2026/08/29/9c144ce0-d695-4826-8e55-a80ea5353437/original.jpg?w=1200&amp;h=630"
-draft: true
 ---
 
 ## iPhone 18 Pro発表日確定！注目の新機能と新CEO
