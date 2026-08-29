@@ -2,6 +2,8 @@
 // src/layouts/Base.astro
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import AdMax from '../components/AdMax.astro';
+import { AD_SLOTS, RAIL_MEDIA } from '../lib/ads';
 import '../styles/global.css';
 
 interface Props {
@@ -75,9 +77,21 @@ const jsonLd =
   </head>
   <body class="min-h-screen bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
     <Header />
-    <main class="mx-auto max-w-2xl px-4 py-8">
-      <slot />
-    </main>
+    <div class="ad-rails">
+      <main class="mx-auto w-full max-w-2xl px-4 py-8">
+        <slot />
+      </main>
+      {AD_SLOTS.railLeft ? (
+        <aside class="ad-rail ad-rail--left" aria-label="広告">
+          <AdMax slotId={AD_SLOTS.railLeft} media={RAIL_MEDIA} width={160} height={600} class="sticky top-6" />
+        </aside>
+      ) : (
+        <div class="ad-rail ad-rail--left"></div>
+      )}
+      <aside class="ad-rail ad-rail--right" aria-label="広告">
+        <AdMax slotId={AD_SLOTS.railRight} media={RAIL_MEDIA} width={160} height={600} class="sticky top-6" />
+      </aside>
+    </div>
     <Footer />
   </body>
 </html>

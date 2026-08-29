@@ -200,3 +200,43 @@
     border-color: var(--color-zinc-800);
   }
 }
+
+/* Ad rails. The middle track matches the content's max-w-2xl, so the article
+   column keeps the same centre line as the header and footer whether or not a
+   rail is showing. Both tracks are reserved even while only one is filled, so
+   adding the second rail later cannot move the content. Keep the width in sync
+   with RAIL_MEDIA in lib/ads.ts. */
+.ad-rail {
+  display: none;
+}
+
+@media (min-width: 1152px) {
+  .ad-rails {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 42rem) 160px;
+    justify-content: center;
+    gap: 2.5rem;
+  }
+
+  /* The content comes first in the DOM and the columns put the rails back on
+     either side of it: an admax tag blocks the parser, so a rail placed ahead of
+     the article would hold up the article's own render. */
+  .ad-rails > main {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .ad-rail {
+    display: block;
+    grid-row: 1;
+    padding-top: 2rem;
+  }
+
+  .ad-rail--left {
+    grid-column: 1;
+  }
+
+  .ad-rail--right {
+    grid-column: 3;
+  }
+}
