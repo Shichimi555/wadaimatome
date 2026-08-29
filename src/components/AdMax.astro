@@ -1,0 +1,37 @@
+---
+// src/components/AdMax.astro
+import { admaxTag } from '../lib/ads';
+
+interface Props {
+  /**
+   * The admax slot id. Not named `slot`: Astro reserves that attribute for
+   * named-slot assignment, so a component using it as a prop is routed to a
+   * slot that does not exist and renders nothing, with no error.
+   */
+  slotId: string;
+  /** Only run the tag at these widths; omitted runs it everywhere. */
+  media?: string;
+  /**
+   * The slot's dimensions. Reserving the space up front keeps the fill from
+   * shifting the page. admax scales a phone slot to its container, so the
+   * reservation is an aspect ratio rather than a fixed height — a 320x100 unit
+   * renders 358x112 on a 390px-wide phone.
+   */
+  width: number;
+  height: number;
+  /** Label the unit where it sits in the flow of the content. */
+  label?: boolean;
+  class?: string;
+}
+
+const { slotId, media, width, height, label = false, class: className } = Astro.props;
+---
+
+<div class={className}>
+  {label && (
+    <span class="mb-1 block text-[10px] leading-none text-zinc-400 dark:text-zinc-600">広告</span>
+  )}
+  <div class="flex justify-center" style={`aspect-ratio:${width}/${height};min-height:${height}px`}>
+    <script is:inline set:html={admaxTag(slotId, media)} />
+  </div>
+</div>
