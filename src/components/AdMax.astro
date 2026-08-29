@@ -16,6 +16,14 @@ interface Props {
    * shifting the page. admax scales a phone slot to its container, so the
    * reservation is an aspect ratio rather than a fixed height — a 320x100 unit
    * renders 358x112 on a 390px-wide phone.
+   *
+   * The scaling runs one way and has no ceiling, so both ends need handling.
+   * On a 320px phone the content column is 288px and the unit still renders at
+   * its full 320px, so the row's negative margin gives back the shortfall — it
+   * resolves to zero wherever the column is already wide enough. At the other
+   * end a 300x250 grew to 640x533 on a 767px column, two thirds of the screen
+   * and visibly upscaled, so the box stops at a third again over its nominal
+   * width.
    */
   width: number;
   height: number;
@@ -25,13 +33,19 @@ interface Props {
 }
 
 const { slotId, media, width, height, label = false, class: className } = Astro.props;
+const maxWidth = Math.round(width * 1.35);
 ---
 
 <div class={className}>
   {label && (
     <span class="mb-1 block text-[10px] leading-none text-zinc-400 dark:text-zinc-600">広告</span>
   )}
-  <div class="flex justify-center" style={`aspect-ratio:${width}/${height};min-height:${height}px`}>
-    <script is:inline set:html={admaxTag(slotId, media)} />
+  <div class="flex justify-center" style={`margin-inline:min(0px,calc((100% - ${width}px) / 2))`}>
+    <div
+      class="w-full"
+      style={`max-width:${maxWidth}px;aspect-ratio:${width}/${height};min-height:${height}px`}
+    >
+      <script is:inline set:html={admaxTag(slotId, media)} />
+    </div>
   </div>
 </div>
