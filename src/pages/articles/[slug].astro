@@ -19,6 +19,15 @@ export async function getStaticPaths() {
 
 const { article, tagCounts } = Astro.props;
 const { Content } = await render(article);
+
+// The mid-article slot belongs before the second heading, but render() hands
+// back a component rather than markup. The entry carries the same HTML the
+// component emits — byte for byte — so the split works on that, and falls back
+// to one undivided body if a future Astro stops populating it.
+const body = article.rendered?.html;
+const secondHeading = body ? body.indexOf('<h2', body.indexOf('<h2') + 1) : -1;
+const bodyBefore = secondHeading > 0 ? body!.slice(0, secondHeading) : null;
+const bodyAfter = secondHeading > 0 ? body!.slice(secondHeading) : null;
 const ogImage = `/og/${article.id}.png`;
 const { linked, plain } = splitTags(article.data.tags, tagCounts);
 const crumb = breadcrumbTag(article.data.tags, tagCounts);
@@ -107,15 +116,31 @@ const schema = [
     )}
 
     <div class="prose prose-zinc dark:prose-invert max-w-none article-body">
-      <Content />
+      {bodyBefore === null ? <Content /> : <Fragment set:html={bodyBefore} />}
     </div>
+
+    {bodyAfter !== null && (
+      <>
+        <AdMax
+          slotId={AD_SLOTS.mobileInline}
+          media={MOBILE_MEDIA}
+          width={320}
+          height={100}
+          label
+          class="my-8 md:hidden"
+        />
+        <div class="prose prose-zinc dark:prose-invert max-w-none article-body">
+          <Fragment set:html={bodyAfter} />
+        </div>
+      </>
+    )}
   </article>
 
   <AdMax
-    slotId={AD_SLOTS.mobileInline}
+    slotId={AD_SLOTS.mobileRectangle}
     media={MOBILE_MEDIA}
-    width={320}
-    height={100}
+    width={300}
+    height={250}
     label
     class="mt-8 md:hidden"
   />

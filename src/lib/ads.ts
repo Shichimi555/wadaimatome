@@ -12,8 +12,10 @@ export const AD_SLOTS = {
    * slot from the admax console.
    */
   railLeft: undefined as string | undefined,
-  /** SP inline 320x100. The endpoint answers desktop user agents with nothing. */
+  /** SP inline 320x100, placed mid-article. Desktop user agents get an empty body. */
   mobileInline: 'abc73ecb880d6e619125f65029ab47bd',
+  /** SP inline 300x250, placed where a reader has finished the article. */
+  mobileRectangle: 'f7fb5a878d7503272ea533211099bbce',
 } as const;
 
 /**
