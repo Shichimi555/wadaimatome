@@ -6,7 +6,6 @@ tags: ["サッカー","プレミアリーグ","マンチェスター・ユナイ
 trendKeyword: "man utd vs ipswich"
 trafficVolume: 500
 heroImage: "https://latest.fotmob.com/wp-content/uploads/2026/08/Covers_Man-United-Ipswich-3008-1.png"
-draft: true
 ---
 
 ## 注目の一戦！マンチェスター・ユナイテッド vs イプスウィッチ
