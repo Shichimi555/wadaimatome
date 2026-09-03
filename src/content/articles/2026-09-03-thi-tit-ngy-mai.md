@@ -6,7 +6,6 @@ tags: ["天気予報","ベトナム","熱帯","暑さ","熱中症"]
 trendKeyword: "thời tiết ngày mai"
 trafficVolume: 1000
 heroImage: "https://vstatic.vietnam.vn/vietnam/resource/IMAGE/2026/09/03/1788425429030_z65203591266395e1164ef86548c94ad2cff2625050903-1788424420104352020026-65-0-1173-1772-crop-17884245505101622436137.jpeg"
-draft: true
 ---
 
 ## 明日の天気予報：北部・中部で猛暑続く
