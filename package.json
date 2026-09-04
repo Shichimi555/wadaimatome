@@ -11,7 +11,6 @@
     "preview": "astro preview",
     "astro": "astro",
     "generate": "tsx scripts/generate.ts",
-    "publish-drafts": "tsx scripts/publish.ts",
     "test": "vitest run",
     "tweet": "tsx scripts/tweet.ts"
   },
