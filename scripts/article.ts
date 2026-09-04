@@ -2,6 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 import type { TrendItem } from './trends';
 import { fetchOgImage } from './ogimage';
 import { fetchTweets, formatTweetsHtml } from './tweets';
+import { withRetry } from './retry';
 
 export interface GeneratedArticle {
   title: string;
@@ -42,13 +43,23 @@ ${newsContext ? `関連ニュース:\n${newsContext}` : ''}
 - タグは3〜5個
 - bodyはMarkdown形式`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-lite',
-    contents: prompt,
-    config: {
-      tools: [{ googleSearch: {} }],
-    },
-  });
+  const response = await withRetry(
+    () =>
+      ai.models.generateContent({
+        model: 'gemini-2.5-flash-lite',
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+        },
+      }),
+    {
+      onRetry: (err, attempt, delayMs) =>
+        console.warn(
+          `Gemini call failed (attempt ${attempt}), retrying in ${delayMs}ms:`,
+          err instanceof Error ? err.message.split('\n')[0] : err
+        ),
+    }
+  );
 
   const text = response.text ?? '';
   const jsonMatch = text.match(/\{[\s\S]*\}/);
