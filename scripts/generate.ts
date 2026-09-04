@@ -29,6 +29,18 @@ function editUrl(slug: string): string {
 }
 
 /**
+ * Error text reaches Discord, and an SDK that failed mid-request tends to quote
+ * the URL it called -- API key and all. Anything long enough to be a credential
+ * is replaced rather than forwarded.
+ */
+export function redactSecrets(text: string): string {
+  return text
+    .replace(/([?&](?:key|token|api_?key)=)[^&\s]+/gi, '$1***')
+    .replace(/\b(?:AIza|ghp_|github_pat_)[A-Za-z0-9_-]{10,}/g, '***')
+    .replace(/https:\/\/discord(?:app)?\.com\/api\/webhooks\/\S+/gi, '***');
+}
+
+/**
  * One block per article: the live URL, an edit link for fixing what the model
  * got wrong, and a ready-to-paste promotion tweet. The auto-poster only takes
  * breaking news (see tweet.ts), so everything else is promoted by hand or not
@@ -55,7 +67,74 @@ export function buildPublishNotification(articles: PublishedArticle[]): string {
   return description.slice(0, EMBED_DESCRIPTION_LIMIT);
 }
 
+async function notify(payload: Parameters<typeof sendDiscordNotification>[0]): Promise<void> {
+  await sendDiscordNotification(payload);
+  console.log('Discord notification sent');
+}
+
+/**
+ * Every run says something. A run that generated nothing looks exactly like a
+ * run that never fired, and the scheduler this used to sit on dropped most of
+ * its runs, so silence has to mean "did not run" and nothing else.
+ */
+async function report(webhookUrl: string | undefined, outcome: {
+  published: PublishedArticle[];
+  failed: string[];
+  trends: number;
+}): Promise<void> {
+  if (!webhookUrl) return;
+
+  const { published, failed, trends } = outcome;
+  const failureLine = failed.length > 0 ? `\n\n⚠️ 生成に失敗: ${failed.join('、')}` : '';
+
+  if (published.length > 0) {
+    await notify({
+      webhookUrl,
+      embeds: [
+        {
+          title: `🚀 記事を公開しました（${published.length}件）`,
+          description: (buildPublishNotification(published) + failureLine).slice(
+            0,
+            EMBED_DESCRIPTION_LIMIT
+          ),
+          color: 0x22c55e,
+        },
+      ],
+    });
+    return;
+  }
+
+  if (failed.length > 0) {
+    await notify({
+      webhookUrl,
+      embeds: [
+        {
+          title: `⚠️ 記事を1件も公開できませんでした（${failed.length}件失敗）`,
+          description: `対象: ${failed.join('、')}\nログを確認してください。`,
+          color: 0xef4444,
+        },
+      ],
+    });
+    return;
+  }
+
+  if (trends === 0) {
+    await notify({
+      webhookUrl,
+      content: '⚠️ トレンドを1件も取得できませんでした（取得元の障害か仕様変更の可能性）',
+    });
+    return;
+  }
+
+  await notify({
+    webhookUrl,
+    content: `🈳 新規トレンドなし（取得${trends}件・すべて既出）`,
+  });
+}
+
 async function main() {
+  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+
   console.log('Fetching trends...');
   const trends = await fetchTrends();
   console.log(`Found ${trends.length} trending keywords`);
@@ -68,12 +147,9 @@ async function main() {
   for (const t of selected) {
     console.log(`  picked: ${t.title} (traffic=${t.traffic}, weight=x${breakingWeight(t)})`);
   }
-  if (selected.length === 0) {
-    console.log('No new trends to process');
-    return;
-  }
 
-  const written: PublishedArticle[] = [];
+  const published: PublishedArticle[] = [];
+  const failed: string[] = [];
 
   for (const trend of selected) {
     try {
@@ -81,7 +157,7 @@ async function main() {
       const article = await generateArticle(trend);
       const path = await writeArticle(article, ARTICLES_DIR);
       const slug = toSlug(article.trendKeyword, new Date(article.pubDate));
-      written.push({
+      published.push({
         title: article.title,
         slug,
         description: article.description,
@@ -90,34 +166,34 @@ async function main() {
       console.log(`Written: ${path}`);
     } catch (err) {
       console.error(`Failed to generate article for "${trend.title}":`, err);
+      failed.push(trend.title);
     }
   }
 
-  if (written.length > 0) {
-    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-    if (webhookUrl) {
-      await sendDiscordNotification({
-        webhookUrl,
-        embeds: [
-          {
-            title: `🚀 記事を公開しました（${written.length}件）`,
-            description: buildPublishNotification(written),
-            color: 0x22c55e,
-          },
-        ],
-      });
-      console.log('Discord notification sent');
-    }
-  }
-
+  // Reaching here with nothing published and nothing failed means dedup left
+  // no candidates: rankTrends only shrinks a non-empty list.
+  await report(webhookUrl, { published, failed, trends: trends.length });
   console.log('Done');
 }
 
 // Only generate when run as a script: importing this module for its helpers
 // must not start a run.
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  main().catch((err) => {
+  main().catch(async (err) => {
     console.error('Generation failed:', err);
+    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+    if (webhookUrl) {
+      await sendDiscordNotification({
+        webhookUrl,
+        embeds: [
+          {
+            title: '⚠️ 記事生成が異常終了しました',
+            description: `\`\`\`\n${redactSecrets(String(err instanceof Error ? err.stack || err.message : err)).slice(0, 1500)}\n\`\`\``,
+            color: 0xef4444,
+          },
+        ],
+      });
+    }
     process.exit(1);
   });
 }

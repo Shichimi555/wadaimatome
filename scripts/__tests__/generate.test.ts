@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPublishNotification, type PublishedArticle } from '../generate';
+import { buildPublishNotification, redactSecrets, type PublishedArticle } from '../generate';
 
 const article = (over: Partial<PublishedArticle> = {}): PublishedArticle => ({
   title: 'テストタイトル',
@@ -45,5 +45,32 @@ describe('buildPublishNotification', () => {
     const text = buildPublishNotification([article({ slug: 'a' }), article({ slug: 'b' })]);
     expect(text).not.toContain('…ほか');
     expect(text.length).toBeLessThanOrEqual(4096);
+  });
+});
+
+describe('redactSecrets', () => {
+  it('should strip a key out of a quoted request url', () => {
+    const out = redactSecrets(
+      'GET https://generativelanguage.googleapis.com/v1/models?key=AIzaSyC0ffee123456789abcdef failed'
+    );
+    expect(out).not.toContain('AIzaSyC0ffee123456789abcdef');
+    expect(out).toContain('key=***');
+    expect(out).toContain('failed');
+  });
+
+  it('should strip a bare api key and a github token', () => {
+    expect(redactSecrets('AIzaSyC0ffee123456789abcdef')).toBe('***');
+    expect(redactSecrets('ghp_0123456789abcdefghij')).toBe('***');
+  });
+
+  it('should strip a discord webhook url', () => {
+    expect(redactSecrets('POST https://discord.com/api/webhooks/123/abcdef timed out')).toBe(
+      'POST *** timed out'
+    );
+  });
+
+  it('should leave ordinary error text alone', () => {
+    const message = 'fetch failed: ECONNRESET after 3 retries (トレンド取得)';
+    expect(redactSecrets(message)).toBe(message);
   });
 });
