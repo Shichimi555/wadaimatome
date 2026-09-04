@@ -3,6 +3,7 @@ import type { TrendItem } from './trends';
 import { fetchOgImage } from './ogimage';
 import { fetchTweets, formatTweetsHtml } from './tweets';
 import { withRetry } from './retry';
+import { extractJson } from './extract-json';
 
 export interface GeneratedArticle {
   title: string;
@@ -62,17 +63,17 @@ ${newsContext ? `関連ニュース:\n${newsContext}` : ''}
   );
 
   const text = response.text ?? '';
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    // Usually the response is valid JSON that stops mid-body, so there is no
-    // closing brace to match. finishReason says whether the model ran out of
-    // output budget or was cut off for another reason.
+  const json = extractJson(text);
+  if (!json) {
+    // Either the model answered in prose instead of JSON, or the object stops
+    // mid-body and never closes. finishReason tells the two apart: STOP means
+    // it chose to end there, MAX_TOKENS means it ran out of output budget.
     const finishReason = response.candidates?.[0]?.finishReason ?? 'unknown';
     throw new Error(
       `No JSON found in Gemini response (finishReason=${finishReason}, ${text.length} chars): ${text.slice(0, 200)}`
     );
   }
-  const parsed = JSON.parse(jsonMatch[0]);
+  const parsed = JSON.parse(json);
 
   if (
     typeof parsed.title !== 'string' ||
