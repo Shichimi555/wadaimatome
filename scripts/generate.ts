@@ -173,6 +173,14 @@ async function main() {
   // Reaching here with nothing published and nothing failed means dedup left
   // no candidates: rankTrends only shrinks a non-empty list.
   await report(webhookUrl, { published, failed, trends: trends.length });
+
+  // A batch where every article failed is a failed run, and cron should see a
+  // non-zero exit. Set the code rather than throwing: report() has already
+  // said so on Discord, and the top-level handler would say it twice.
+  if (published.length === 0 && failed.length > 0) {
+    console.error(`Generated 0 of ${failed.length} article(s)`);
+    process.exitCode = 1;
+  }
   console.log('Done');
 }
 
