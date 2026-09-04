@@ -64,7 +64,13 @@ ${newsContext ? `関連ニュース:\n${newsContext}` : ''}
   const text = response.text ?? '';
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error(`No JSON found in Gemini response: ${text.slice(0, 200)}`);
+    // Usually the response is valid JSON that stops mid-body, so there is no
+    // closing brace to match. finishReason says whether the model ran out of
+    // output budget or was cut off for another reason.
+    const finishReason = response.candidates?.[0]?.finishReason ?? 'unknown';
+    throw new Error(
+      `No JSON found in Gemini response (finishReason=${finishReason}, ${text.length} chars): ${text.slice(0, 200)}`
+    );
   }
   const parsed = JSON.parse(jsonMatch[0]);
 
