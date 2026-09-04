@@ -27,6 +27,7 @@ pnpm-debug.log*
 *cookies*.txt
 data/tweet-history.json
 tweet.log*
+generate.log*
 
 # Search Console exports
 *-Coverage-*.zip

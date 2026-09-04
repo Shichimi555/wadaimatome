@@ -1,8 +1,9 @@
 name: Generate Articles
 
+# Scheduled runs moved to lwyse's cron on 2026-09-04: GitHub only fired this
+# 2-9 times a day instead of 24, so breaking news sat unpublished for hours.
+# Kept as a manual fallback for when that host is down.
 on:
-  schedule:
-    - cron: '0 * * * *'
   workflow_dispatch:
 
 permissions:
