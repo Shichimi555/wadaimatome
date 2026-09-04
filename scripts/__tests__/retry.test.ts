@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { isRetryable, withRetry } from '../retry';
+import { isRetryable, isQuotaExhausted, withRetry } from '../retry';
 
 const apiError = (status: number) =>
   Object.assign(
@@ -10,7 +10,7 @@ const apiError = (status: number) =>
 describe('isRetryable', () => {
   it('should retry an overloaded model', () => {
     expect(isRetryable(apiError(503))).toBe(true);
-    expect(isRetryable(apiError(429))).toBe(true);
+    expect(isRetryable(apiError(500))).toBe(true);
   });
 
   it('should not retry a bad key or a bad request', () => {
@@ -72,5 +72,73 @@ describe('withRetry', () => {
     const fn = vi.fn().mockRejectedValueOnce(apiError(503)).mockResolvedValue('ok');
     await withRetry(fn, { sleep: async () => {}, baseDelayMs: 500, onRetry });
     expect(onRetry).toHaveBeenCalledWith(expect.anything(), 1, 500);
+  });
+});
+
+describe('quota-aware retrying', () => {
+  const perDay = {
+    status: 429,
+    message: JSON.stringify({
+      error: {
+        code: 429,
+        status: 'RESOURCE_EXHAUSTED',
+        details: [
+          {
+            '@type': 'type.googleapis.com/google.rpc.QuotaFailure',
+            violations: [
+              {
+                quotaId: 'GenerateRequestsPerDayPerProjectPerModel-FreeTier',
+                quotaValue: '20',
+              },
+            ],
+          },
+          { '@type': 'type.googleapis.com/google.rpc.RetryInfo', retryDelay: '38s' },
+        ],
+      },
+    }),
+  };
+  const perMinute = {
+    status: 429,
+    message: JSON.stringify({
+      error: {
+        code: 429,
+        details: [
+          {
+            violations: [{ quotaId: 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier' }],
+          },
+        ],
+      },
+    }),
+  };
+  const vagueQuota = { status: 429, message: 'You exceeded your current quota.' };
+  const overloaded = { status: 503, message: 'high demand' };
+
+  it('does not retry a per-day quota error', () => {
+    // Retrying burns three requests out of the day's budget to learn what the
+    // first response already said. The 38s retryDelay in the body is a lie for
+    // a daily quota -- it will not clear until midnight Pacific.
+    expect(isRetryable(perDay)).toBe(false);
+  });
+
+  it('retries a per-minute quota error', () => {
+    expect(isRetryable(perMinute)).toBe(true);
+  });
+
+  it('does not retry a 429 whose quota is unnamed', () => {
+    expect(isRetryable(vagueQuota)).toBe(false);
+  });
+
+  it('still retries an overloaded model', () => {
+    expect(isRetryable(overloaded)).toBe(true);
+  });
+
+  it('reports a per-day quota as exhausted for the rest of the run', () => {
+    expect(isQuotaExhausted(perDay)).toBe(true);
+    expect(isQuotaExhausted(vagueQuota)).toBe(true);
+  });
+
+  it('does not call a per-minute quota or an overload exhausted', () => {
+    expect(isQuotaExhausted(perMinute)).toBe(false);
+    expect(isQuotaExhausted(overloaded)).toBe(false);
   });
 });

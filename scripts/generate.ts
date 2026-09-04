@@ -7,6 +7,7 @@ import { writeArticle, toSlug } from './markdown';
 import { articleUrl } from './urls';
 import { buildTweet } from './x';
 import { sendDiscordNotification } from './notify';
+import { isQuotaExhausted } from './retry';
 
 const ARTICLES_DIR = './src/content/articles';
 const MAX_ARTICLES = 5;
@@ -129,10 +130,16 @@ async function report(webhookUrl: string | undefined, outcome: {
   published: PublishedArticle[];
   failed: FailedArticle[];
   trends: number;
+  quotaExhausted?: boolean;
 }): Promise<void> {
   if (!webhookUrl) return;
 
-  const { published, failed, trends } = outcome;
+  const { published, failed, trends, quotaExhausted } = outcome;
+  // Say it once, plainly. Otherwise the reader has to decode a quota dump every
+  // hour until the budget resets at midnight Pacific (16:00 JST).
+  const quotaLine = quotaExhausted
+    ? '\n\n🚧 API の1日あたりの上限に達したため、この回は打ち切りました（上限は太平洋時間の0時＝JST 16時にリセット）'
+    : '';
   const failureLine =
     failed.length > 0 ? `\n\n⚠️ ${failed.length}件の生成に失敗\n${buildFailureReport(failed)}` : '';
 
@@ -142,7 +149,7 @@ async function report(webhookUrl: string | undefined, outcome: {
       embeds: [
         {
           title: `🚀 記事を公開しました（${published.length}件）`,
-          description: (buildPublishNotification(published) + failureLine).slice(
+          description: (buildPublishNotification(published) + failureLine + quotaLine).slice(
             0,
             EMBED_DESCRIPTION_LIMIT
           ),
@@ -159,7 +166,7 @@ async function report(webhookUrl: string | undefined, outcome: {
       embeds: [
         {
           title: `⚠️ 記事を1件も公開できませんでした（${failed.length}件失敗）`,
-          description: buildFailureReport(failed).slice(0, EMBED_DESCRIPTION_LIMIT),
+          description: (buildFailureReport(failed) + quotaLine).slice(0, EMBED_DESCRIPTION_LIMIT),
           color: 0xef4444,
         },
       ],
@@ -200,7 +207,9 @@ async function main() {
   const published: PublishedArticle[] = [];
   const failed: FailedArticle[] = [];
 
-  for (const trend of selected) {
+  let quotaExhausted = false;
+
+  for (const [i, trend] of selected.entries()) {
     try {
       console.log(`Generating article for: ${trend.title}`);
       const article = await generateArticle(trend);
@@ -216,12 +225,22 @@ async function main() {
     } catch (err) {
       console.error(`Failed to generate article for "${trend.title}":`, err);
       failed.push({ trend: trend.title, error: describeError(err) });
+
+      // The day's request budget is gone, so every remaining trend would spend
+      // a request to be told the same thing. Stop and leave them for a later
+      // run -- they stay in the trend feed, and dedup will still see them.
+      if (isQuotaExhausted(err)) {
+        quotaExhausted = true;
+        const skipped = selected.length - i - 1;
+        if (skipped > 0) console.warn(`Quota exhausted, skipping ${skipped} remaining trend(s)`);
+        break;
+      }
     }
   }
 
   // Reaching here with nothing published and nothing failed means dedup left
   // no candidates: rankTrends only shrinks a non-empty list.
-  await report(webhookUrl, { published, failed, trends: trends.length });
+  await report(webhookUrl, { published, failed, trends: trends.length, quotaExhausted });
 
   // A batch where every article failed is a failed run, and cron should see a
   // non-zero exit. Set the code rather than throwing: report() has already
