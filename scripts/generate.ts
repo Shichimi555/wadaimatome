@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'path';
-import { fetchTrends, rankTrends, breakingWeight } from './trends';
+import { fetchTrends, rankTrends, breakingWeight, type TrendItem } from './trends';
 import { filterNewTrends, loadExistingArticles } from './dedup';
 import { generateArticle } from './article';
 import { writeArticle, toSlug } from './markdown';
@@ -8,9 +8,10 @@ import { articleUrl } from './urls';
 import { buildTweet } from './x';
 import { sendDiscordNotification } from './notify';
 import { isQuotaExhausted } from './retry';
+import { createRotation, type Rotation } from './models';
 
 const ARTICLES_DIR = './src/content/articles';
-const MAX_ARTICLES = 5;
+const MAX_ARTICLES = 3;
 const GITHUB_REPO = 'Shichimi555/wadaimatome';
 
 /** Discord rejects the whole webhook call if an embed description exceeds this. */
@@ -188,6 +189,28 @@ async function report(webhookUrl: string | undefined, outcome: {
   });
 }
 
+/**
+ * Generates one article, moving to the next model when the current one has spent
+ * its daily budget. Only a failure that is not about quota -- or running out of
+ * models -- reaches the caller.
+ */
+async function generateOnAnyModel(trend: TrendItem, rotation: Rotation) {
+  let lastError: unknown = new Error('利用できるモデルがありません');
+
+  for (let model = rotation.pick(); model !== null; model = rotation.pick()) {
+    try {
+      return await generateArticle(trend, model);
+    } catch (err) {
+      if (!isQuotaExhausted(err)) throw err;
+      console.warn(`${model}: daily quota spent, trying the next model`);
+      rotation.retire(model);
+      lastError = err;
+    }
+  }
+
+  throw lastError;
+}
+
 async function main() {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
@@ -207,12 +230,15 @@ async function main() {
   const published: PublishedArticle[] = [];
   const failed: FailedArticle[] = [];
 
+  // Two models, two daily budgets. When one runs dry the run carries on with
+  // the other instead of giving up on the rest of the batch.
+  const rotation = createRotation();
   let quotaExhausted = false;
 
   for (const [i, trend] of selected.entries()) {
     try {
       console.log(`Generating article for: ${trend.title}`);
-      const article = await generateArticle(trend);
+      const article = await generateOnAnyModel(trend, rotation);
       const path = await writeArticle(article, ARTICLES_DIR);
       const slug = toSlug(article.trendKeyword, new Date(article.pubDate));
       published.push({
@@ -229,7 +255,7 @@ async function main() {
       // The day's request budget is gone, so every remaining trend would spend
       // a request to be told the same thing. Stop and leave them for a later
       // run -- they stay in the trend feed, and dedup will still see them.
-      if (isQuotaExhausted(err)) {
+      if (rotation.spent) {
         quotaExhausted = true;
         const skipped = selected.length - i - 1;
         if (skipped > 0) console.warn(`Quota exhausted, skipping ${skipped} remaining trend(s)`);

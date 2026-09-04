@@ -4,6 +4,7 @@ import { fetchOgImage } from './ogimage';
 import { fetchTweets, formatTweetsHtml } from './tweets';
 import { withRetry } from './retry';
 import { extractJson } from './extract-json';
+import { MODELS } from './models';
 
 export interface GeneratedArticle {
   title: string;
@@ -16,7 +17,10 @@ export interface GeneratedArticle {
   heroImage: string;
 }
 
-export async function generateArticle(trend: TrendItem): Promise<GeneratedArticle> {
+export async function generateArticle(
+  trend: TrendItem,
+  model: string = MODELS[0]
+): Promise<GeneratedArticle> {
   const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
   const newsContext = trend.newsItems
@@ -47,7 +51,7 @@ ${newsContext ? `関連ニュース:\n${newsContext}` : ''}
   const response = await withRetry(
     () =>
       ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
+        model,
         contents: prompt,
         config: {
           tools: [{ googleSearch: {} }],
