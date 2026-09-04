@@ -40,6 +40,54 @@ export function redactSecrets(text: string): string {
     .replace(/https:\/\/discord(?:app)?\.com\/api\/webhooks\/\S+/gi, '***');
 }
 
+export interface FailedArticle {
+  trend: string;
+  error: string;
+}
+
+/**
+ * The one line worth reading. A Gemini failure arrives as a stack wrapped
+ * around a JSON body, and the body's own message is the part that says whether
+ * to wait it out or go fix something.
+ */
+export function describeError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  const status = (err as { status?: unknown } | null)?.status;
+
+  let detail = raw.split('\n')[0].trim();
+  const body = raw.match(/\{[\s\S]*\}/);
+  if (body) {
+    try {
+      const parsed = JSON.parse(body[0])?.error;
+      if (parsed?.message) {
+        detail = [parsed.status, parsed.message].filter(Boolean).join(': ');
+      }
+    } catch {
+      // Not JSON after all; the first line already covers it.
+    }
+  }
+
+  const prefix = typeof status === 'number' ? `${status} ` : '';
+  return redactSecrets(prefix + detail).slice(0, 400);
+}
+
+/**
+ * When the model is overloaded every article in the batch fails the same way,
+ * so the errors are grouped and the keywords listed under each.
+ */
+export function buildFailureReport(failed: FailedArticle[]): string {
+  const groups = new Map<string, string[]>();
+  for (const f of failed) {
+    const trends = groups.get(f.error);
+    if (trends) trends.push(f.trend);
+    else groups.set(f.error, [f.trend]);
+  }
+
+  return [...groups]
+    .map(([error, trends]) => `\`\`\`\n${error}\n\`\`\`\n対象: ${trends.join('、')}`)
+    .join('\n');
+}
+
 /**
  * One block per article: the live URL, an edit link for fixing what the model
  * got wrong, and a ready-to-paste promotion tweet. The auto-poster only takes
@@ -79,13 +127,14 @@ async function notify(payload: Parameters<typeof sendDiscordNotification>[0]): P
  */
 async function report(webhookUrl: string | undefined, outcome: {
   published: PublishedArticle[];
-  failed: string[];
+  failed: FailedArticle[];
   trends: number;
 }): Promise<void> {
   if (!webhookUrl) return;
 
   const { published, failed, trends } = outcome;
-  const failureLine = failed.length > 0 ? `\n\n⚠️ 生成に失敗: ${failed.join('、')}` : '';
+  const failureLine =
+    failed.length > 0 ? `\n\n⚠️ ${failed.length}件の生成に失敗\n${buildFailureReport(failed)}` : '';
 
   if (published.length > 0) {
     await notify({
@@ -110,7 +159,7 @@ async function report(webhookUrl: string | undefined, outcome: {
       embeds: [
         {
           title: `⚠️ 記事を1件も公開できませんでした（${failed.length}件失敗）`,
-          description: `対象: ${failed.join('、')}\nログを確認してください。`,
+          description: buildFailureReport(failed).slice(0, EMBED_DESCRIPTION_LIMIT),
           color: 0xef4444,
         },
       ],
@@ -149,7 +198,7 @@ async function main() {
   }
 
   const published: PublishedArticle[] = [];
-  const failed: string[] = [];
+  const failed: FailedArticle[] = [];
 
   for (const trend of selected) {
     try {
@@ -166,7 +215,7 @@ async function main() {
       console.log(`Written: ${path}`);
     } catch (err) {
       console.error(`Failed to generate article for "${trend.title}":`, err);
-      failed.push(trend.title);
+      failed.push({ trend: trend.title, error: describeError(err) });
     }
   }
 

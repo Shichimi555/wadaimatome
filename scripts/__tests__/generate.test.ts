@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { buildPublishNotification, redactSecrets, type PublishedArticle } from '../generate';
+import {
+  buildFailureReport,
+  buildPublishNotification,
+  describeError,
+  redactSecrets,
+  type PublishedArticle,
+} from '../generate';
 
 const article = (over: Partial<PublishedArticle> = {}): PublishedArticle => ({
   title: 'テストタイトル',
@@ -72,5 +78,49 @@ describe('redactSecrets', () => {
   it('should leave ordinary error text alone', () => {
     const message = 'fetch failed: ECONNRESET after 3 retries (トレンド取得)';
     expect(redactSecrets(message)).toBe(message);
+  });
+});
+
+const overloaded = Object.assign(
+  new Error(
+    '{"error":{"code":503,"message":"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.","status":"UNAVAILABLE"}}\n    at throwErrorIfNotOK (/x/node_modules/@google/genai/src/_api_client.ts:982:24)'
+  ),
+  { status: 503 }
+);
+
+describe('describeError', () => {
+  it('should pull the status and message out of a gemini failure', () => {
+    const out = describeError(overloaded);
+    expect(out).toContain('503');
+    expect(out).toContain('UNAVAILABLE');
+    expect(out).toContain('high demand');
+  });
+
+  it('should drop the stack trace', () => {
+    expect(describeError(overloaded)).not.toContain('_api_client.ts');
+  });
+
+  it('should fall back to the first line of an ordinary error', () => {
+    expect(describeError(new Error('No JSON found in Gemini response\n  at foo'))).toBe(
+      'No JSON found in Gemini response'
+    );
+  });
+
+  it('should redact a key that leaked into the message', () => {
+    const out = describeError(new Error('GET https://x/v1?key=AIzaSyC0ffee123456789abcdef failed'));
+    expect(out).not.toContain('AIzaSyC0ffee123456789abcdef');
+  });
+});
+
+describe('buildFailureReport', () => {
+  it('should group keywords under a shared error', () => {
+    const report = buildFailureReport([
+      { trend: '楽天', error: '503 UNAVAILABLE: high demand' },
+      { trend: 'fod', error: '503 UNAVAILABLE: high demand' },
+      { trend: 'アジア大会', error: 'No JSON found' },
+    ]);
+    expect(report.match(/high demand/g)).toHaveLength(1);
+    expect(report).toContain('対象: 楽天、fod');
+    expect(report).toContain('対象: アジア大会');
   });
 });
