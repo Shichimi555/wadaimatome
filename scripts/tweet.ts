@@ -3,6 +3,7 @@ import { join, dirname, resolve } from 'path';
 import { pathToFileURL } from 'node:url';
 import { breakingWeightOfText } from './trends';
 import { buildTweet } from './x';
+import { articleUrl } from './urls';
 import {
   postTweet,
   ComposeMismatchError,
@@ -14,7 +15,6 @@ import {
 
 const ARTICLES_DIR = './src/content/articles';
 const HISTORY_PATH = './data/tweet-history.json';
-const SITE_URL = process.env.SITE_URL || 'https://wadaimatome.com';
 
 /**
  * Only breaking news gets tweeted. The site publishes ~32 articles a day;
@@ -139,11 +139,6 @@ export function selectArticles(
     .filter((a) => breakingScore(a) >= minWeight)
     .sort((a, b) => b.pubDate.valueOf() - a.pubDate.valueOf())
     .slice(0, budget);
-}
-
-/** Canonical article URL: percent-encoded with a trailing slash. */
-export function articleUrl(slug: string, siteUrl = SITE_URL): string {
-  return `${siteUrl}/articles/${encodeURIComponent(slug)}/`;
 }
 
 async function readHistory(path: string): Promise<TweetHistory> {

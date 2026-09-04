@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  articleUrl,
   breakingScore,
   jstDay,
   parseArticle,
@@ -207,13 +206,5 @@ describe('selectArticles', () => {
     expect(
       selectArticles(articles, history(), NOW, { perRunLimit: 3, dailyLimit: 10 })
     ).toHaveLength(3);
-  });
-});
-
-describe('articleUrl', () => {
-  it('should percent-encode the slug and keep the trailing slash', () => {
-    expect(articleUrl('2026-08-17-風', 'https://wadaimatome.com')).toBe(
-      'https://wadaimatome.com/articles/2026-08-17-%E9%A2%A8/'
-    );
   });
 });
