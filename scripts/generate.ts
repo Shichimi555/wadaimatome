@@ -1,14 +1,17 @@
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'path';
 import { fetchTrends, rankTrends, breakingWeight, type TrendItem } from './trends';
+import type { ArticleDraft } from './draft';
 import { filterNewTrends, loadExistingArticles } from './dedup';
 import { generateArticle } from './article';
+import { draftWithGemini } from './gemini';
+import { draftWithWorkersAI, isCapacityError } from './workers-ai';
 import { writeArticle, toSlug } from './markdown';
 import { articleUrl } from './urls';
 import { buildTweet } from './x';
 import { sendDiscordNotification } from './notify';
 import { isQuotaExhausted } from './retry';
-import { createRotation, type Rotation } from './models';
+import { createRotation } from './models';
 
 const ARTICLES_DIR = './src/content/articles';
 const MAX_ARTICLES = 3;
@@ -139,7 +142,7 @@ async function report(webhookUrl: string | undefined, outcome: {
   // Say it once, plainly. Otherwise the reader has to decode a quota dump every
   // hour until the budget resets at midnight Pacific (16:00 JST).
   const quotaLine = quotaExhausted
-    ? '\n\n🚧 API の1日あたりの上限に達したため、この回は打ち切りました（上限は太平洋時間の0時＝JST 16時にリセット）'
+    ? '\n\n🚧 Gemini・Workers AI とも1日の上限に達したため、この回は打ち切りました（Gemini は JST 16時、Workers AI は JST 9時にリセット）'
     : '';
   const failureLine =
     failed.length > 0 ? `\n\n⚠️ ${failed.length}件の生成に失敗\n${buildFailureReport(failed)}` : '';
@@ -189,22 +192,81 @@ async function report(webhookUrl: string | undefined, outcome: {
   });
 }
 
-/**
- * Generates one article, moving to the next model when the current one has spent
- * its daily budget. Only a failure that is not about quota -- or running out of
- * models -- reaches the caller.
- */
-async function generateOnAnyModel(trend: TrendItem, rotation: Rotation) {
-  let lastError: unknown = new Error('利用できるモデルがありません');
+/** One way of writing an article, plus whether it still has budget today. */
+interface Engine {
+  readonly label: string;
+  spent: boolean;
+  draft(trend: TrendItem): Promise<ArticleDraft>;
+}
 
-  for (let model = rotation.pick(); model !== null; model = rotation.pick()) {
+/**
+ * Gemini, walking its two models. Each has its own 20-a-day allowance, so a
+ * model that runs dry costs one request to discover and then steps aside.
+ */
+function geminiEngine(): Engine {
+  const rotation = createRotation();
+
+  const engine: Engine = {
+    label: 'Gemini',
+    spent: false,
+    async draft(trend) {
+      let lastError: unknown = new Error('利用できるモデルがありません');
+
+      for (let model = rotation.pick(); model !== null; model = rotation.pick()) {
+        try {
+          return await draftWithGemini(trend, model);
+        } catch (err) {
+          if (!isQuotaExhausted(err)) throw err;
+          console.warn(`  ${model}: daily quota spent, trying the next model`);
+          rotation.retire(model);
+          lastError = err;
+        }
+      }
+
+      engine.spent = true;
+      throw lastError;
+    },
+  };
+
+  return engine;
+}
+
+/** Workers AI, which has no search of its own and is fed the news text instead. */
+function workersAiEngine(): Engine {
+  const engine: Engine = {
+    label: 'Workers AI',
+    spent: false,
+    async draft(trend) {
+      try {
+        return await draftWithWorkersAI(trend);
+      } catch (err) {
+        if (isCapacityError(err)) engine.spent = true;
+        throw err;
+      }
+    },
+  };
+
+  return engine;
+}
+
+/**
+ * Writes one article, trying the engines in order. Any failure moves to the next
+ * engine, not just a budget one: a trend the first engine cannot write is still
+ * worth offering to the second.
+ */
+async function writeWithEngines(trend: TrendItem, engines: Engine[]) {
+  const usable = engines.filter((e) => !e.spent);
+  if (usable.length === 0) throw new Error('すべてのエンジンが1日の上限に達しています');
+
+  let lastError: unknown;
+  for (const engine of usable) {
     try {
-      return await generateArticle(trend, model);
+      console.log(`  engine: ${engine.label}`);
+      return await generateArticle(trend, (t) => engine.draft(t));
     } catch (err) {
-      if (!isQuotaExhausted(err)) throw err;
-      console.warn(`${model}: daily quota spent, trying the next model`);
-      rotation.retire(model);
       lastError = err;
+      const line = err instanceof Error ? err.message.split('\n')[0] : String(err);
+      console.warn(`  ${engine.label} failed: ${line}`);
     }
   }
 
@@ -230,15 +292,17 @@ async function main() {
   const published: PublishedArticle[] = [];
   const failed: FailedArticle[] = [];
 
-  // Two models, two daily budgets. When one runs dry the run carries on with
-  // the other instead of giving up on the rest of the batch.
-  const rotation = createRotation();
+  const gemini = geminiEngine();
+  const workers = workersAiEngine();
   let quotaExhausted = false;
 
   for (const [i, trend] of selected.entries()) {
     try {
       console.log(`Generating article for: ${trend.title}`);
-      const article = await generateOnAnyModel(trend, rotation);
+      // The top trend is the one worth Gemini's grounding, which digs up names
+      // and quotes the linked stories do not carry. The rest go to Workers AI,
+      // whose daily budget is about twice as large.
+      const article = await writeWithEngines(trend, i === 0 ? [gemini, workers] : [workers, gemini]);
       const path = await writeArticle(article, ARTICLES_DIR);
       const slug = toSlug(article.trendKeyword, new Date(article.pubDate));
       published.push({
@@ -252,10 +316,10 @@ async function main() {
       console.error(`Failed to generate article for "${trend.title}":`, err);
       failed.push({ trend: trend.title, error: describeError(err) });
 
-      // The day's request budget is gone, so every remaining trend would spend
-      // a request to be told the same thing. Stop and leave them for a later
-      // run -- they stay in the trend feed, and dedup will still see them.
-      if (rotation.spent) {
+      // Both budgets are gone, so every remaining trend would spend a request to
+      // be told the same thing. Stop and leave them for a later run -- they stay
+      // in the trend feed, and dedup will still see them.
+      if (gemini.spent && workers.spent) {
         quotaExhausted = true;
         const skipped = selected.length - i - 1;
         if (skipped > 0) console.warn(`Quota exhausted, skipping ${skipped} remaining trend(s)`);

@@ -1,10 +1,7 @@
-import { GoogleGenAI } from '@google/genai';
 import type { TrendItem } from './trends';
+import type { ArticleDraft } from './draft';
 import { fetchOgImage } from './ogimage';
 import { fetchTweets, formatTweetsHtml } from './tweets';
-import { withRetry } from './retry';
-import { extractJson } from './extract-json';
-import { MODELS } from './models';
 
 export interface GeneratedArticle {
   title: string;
@@ -17,98 +14,37 @@ export interface GeneratedArticle {
   heroImage: string;
 }
 
-export async function generateArticle(
-  trend: TrendItem,
-  model: string = MODELS[0]
-): Promise<GeneratedArticle> {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+/** Writes the article text for a trend. Which model does it is the caller's choice. */
+export type Drafter = (trend: TrendItem) => Promise<ArticleDraft>;
 
-  const newsContext = trend.newsItems
-    .map((n) => `- ${n.title} (${n.url})`)
-    .join('\n');
-
-  const prompt = `あなたはトレンドニュースのキュレーターです。以下のトレンドキーワードについて、日本語で記事を書いてください。
-
-キーワード: ${trend.title}
-${newsContext ? `関連ニュース:\n${newsContext}` : ''}
-
-以下のJSON形式で出力してください。他のテキストは出力しないでください:
-{
-  "title": "キャッチーなタイトル（30〜40文字）",
-  "description": "OGP用の説明文（120文字以内）",
-  "tags": ["タグ1", "タグ2", "タグ3"],
-  "body": "## セクション1\\n\\n本文...\\n\\n## セクション2\\n\\n本文...\\n\\n## まとめ\\n\\nまとめ..."
+async function pickHeroImage(trend: TrendItem): Promise<string> {
+  for (const news of trend.newsItems) {
+    if (!news.url) continue;
+    const image = await fetchOgImage(news.url);
+    if (image) return image;
+  }
+  return trend.picture || trend.newsItems.find((n) => n.picture)?.picture || '';
 }
 
-注意:
-- 各セクションは200〜300文字
-- 「まとめ」セクションを含める
-- 「ネットの反応」セクションは書かないこと（実際のSNS投稿を後から自動で差し込むため）
-- SNSの投稿内容を創作・引用しないこと
-- タグは3〜5個
-- bodyはMarkdown形式`;
+/**
+ * Everything that happens to an article regardless of who wrote it: the hero
+ * image, the real tweets, the timestamp. Keeping it here is what lets the two
+ * engines stay interchangeable.
+ */
+export async function generateArticle(
+  trend: TrendItem,
+  draft: Drafter
+): Promise<GeneratedArticle> {
+  const written = await draft(trend);
 
-  const response = await withRetry(
-    () =>
-      ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: {
-          tools: [{ googleSearch: {} }],
-        },
-      }),
-    {
-      onRetry: (err, attempt, delayMs) =>
-        console.warn(
-          `Gemini call failed (attempt ${attempt}), retrying in ${delayMs}ms:`,
-          err instanceof Error ? err.message.split('\n')[0] : err
-        ),
-    }
-  );
-
-  const text = response.text ?? '';
-  const json = extractJson(text);
-  if (!json) {
-    // Either the model answered in prose instead of JSON, or the object stops
-    // mid-body and never closes. finishReason tells the two apart: STOP means
-    // it chose to end there, MAX_TOKENS means it ran out of output budget.
-    const finishReason = response.candidates?.[0]?.finishReason ?? 'unknown';
-    throw new Error(
-      `No JSON found in Gemini response (finishReason=${finishReason}, ${text.length} chars): ${text.slice(0, 200)}`
-    );
-  }
-  const parsed = JSON.parse(json);
-
-  if (
-    typeof parsed.title !== 'string' ||
-    typeof parsed.description !== 'string' ||
-    typeof parsed.body !== 'string' ||
-    !Array.isArray(parsed.tags)
-  ) {
-    throw new Error(`Invalid response shape from Gemini: ${Object.keys(parsed).join(', ')}`);
-  }
-
-  const now = new Date();
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  const jst = new Date(Date.now() + 9 * 60 * 60 * 1000);
   const pubDate = jst.toISOString().replace('Z', '+09:00');
 
-  let heroImage = '';
-  for (const news of trend.newsItems) {
-    if (news.url) {
-      heroImage = await fetchOgImage(news.url);
-      if (heroImage) break;
-    }
-  }
-  if (!heroImage) {
-    heroImage =
-      trend.picture ||
-      trend.newsItems.find((n) => n.picture)?.picture ||
-      '';
-  }
+  const heroImage = await pickHeroImage(trend);
 
   // Always drop any "ネットの反応" the model wrote: its quotes are invented.
   // Real tweets are appended below when we manage to fetch them.
-  let body: string = parsed.body.replace(/## ネットの反応[\s\S]*?(?=## |$)/, '').trimEnd();
+  let body = written.body.replace(/## ネットの反応[\s\S]*?(?=## |$)/, '').trimEnd();
 
   const tweets = await fetchTweets(trend.title);
   if (tweets.length > 0) {
@@ -118,10 +54,10 @@ ${newsContext ? `関連ニュース:\n${newsContext}` : ''}
   }
 
   return {
-    title: parsed.title,
-    description: parsed.description,
+    title: written.title,
+    description: written.description,
     body,
-    tags: parsed.tags,
+    tags: written.tags,
     trendKeyword: trend.title,
     trafficVolume: trend.traffic,
     pubDate,
