@@ -17,7 +17,7 @@ nvm use 22 >/dev/null || exit 1
 
 cd "$(dirname "$0")" || exit 1
 
-# GEMINI_API_KEY と DISCORD_WEBHOOK_URL。.gitignore 済み。
+# GEMINI_API_KEY と Discord の webhook。.gitignore 済み。
 if [ -f .env ]; then
   set -a
   # shellcheck disable=SC1091
@@ -29,12 +29,18 @@ fi
 # 転ぶと誰も気づかない。ログを読みに行かないと分からない失敗を作らない。
 abort() {
   echo "[ERROR] $1"
-  if [ -n "${DISCORD_WEBHOOK_URL:-}" ]; then
-    printf '%s' "⚠️ 記事生成 (lwyse): $1" \
-      | python3 -c 'import json,sys; print(json.dumps({"content": sys.stdin.read()}))' \
-      | curl -sS -m 15 -H 'Content-Type: application/json' -d @- "$DISCORD_WEBHOOK_URL" >/dev/null \
+  payload=$(printf '%s' "⚠️ 記事生成 (lwyse): $1" \
+    | python3 -c 'import json,sys; print(json.dumps({"content": sys.stdin.read()}))')
+  # 通常チャンネルとエラー専用チャンネルの両方へ。同じ URL なら1回だけ。
+  sent=""
+  for url in "${DISCORD_WEBHOOK_URL:-}" "${DISCORD_ERROR_WEBHOOK_URL:-}"; do
+    [ -n "$url" ] || continue
+    [ "$url" != "$sent" ] || continue
+    printf '%s' "$payload" \
+      | curl -sS -m 15 -H 'Content-Type: application/json' -d @- "$url" >/dev/null \
       || echo "[WARN] Discord への通知にも失敗しました"
-  fi
+    sent="$url"
+  done
   exit 1
 }
 

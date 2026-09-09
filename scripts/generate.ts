@@ -9,7 +9,7 @@ import { draftWithWorkersAI, isCapacityError } from './workers-ai';
 import { writeArticle, toSlug } from './markdown';
 import { articleUrl } from './urls';
 import { buildTweet } from './x';
-import { sendDiscordNotification } from './notify';
+import { sendDiscordNotification, type DiscordEmbed } from './notify';
 import { isQuotaExhausted } from './retry';
 import { createRotation } from './models';
 
@@ -120,25 +120,42 @@ export function buildPublishNotification(articles: PublishedArticle[]): string {
   return description.slice(0, EMBED_DESCRIPTION_LIMIT);
 }
 
-async function notify(payload: Parameters<typeof sendDiscordNotification>[0]): Promise<void> {
-  await sendDiscordNotification(payload);
-  console.log('Discord notification sent');
+export interface Channels {
+  /** Every run reports here. */
+  main?: string;
+  /** Failures only. Same URL as main means one channel, not two notifications. */
+  errors?: string;
 }
 
-/**
- * Every run says something. A run that generated nothing looks exactly like a
- * run that never fired, and the scheduler this used to sit on dropped most of
- * its runs, so silence has to mean "did not run" and nothing else.
- */
-async function report(webhookUrl: string | undefined, outcome: {
+export interface RunOutcome {
   published: PublishedArticle[];
   failed: FailedArticle[];
   trends: number;
   quotaExhausted?: boolean;
-}): Promise<void> {
-  if (!webhookUrl) return;
+}
 
+export interface Delivery {
+  webhookUrl: string;
+  content?: string;
+  embeds?: DiscordEmbed[];
+}
+
+const clip = (text: string) => text.slice(0, EMBED_DESCRIPTION_LIMIT);
+
+/**
+ * Decides who hears about a run.
+ *
+ * Every run says something on the main channel. A run that generated nothing
+ * looks exactly like a run that never fired, and the scheduler this used to sit
+ * on dropped most of its runs, so silence has to mean "did not run".
+ *
+ * The error channel is the opposite: it stays quiet unless something broke, so
+ * a failure is not buried under 24 publish notifications a day. It repeats what
+ * the main channel already said, on purpose.
+ */
+export function planReport(channels: Channels, outcome: RunOutcome): Delivery[] {
   const { published, failed, trends, quotaExhausted } = outcome;
+
   // Say it once, plainly. Otherwise the reader has to decode a quota dump every
   // hour until the budget resets at midnight Pacific (16:00 JST).
   const quotaLine = quotaExhausted
@@ -146,50 +163,77 @@ async function report(webhookUrl: string | undefined, outcome: {
     : '';
   const failureLine =
     failed.length > 0 ? `\n\n⚠️ ${failed.length}件の生成に失敗\n${buildFailureReport(failed)}` : '';
+  const noTrends = '⚠️ トレンドを1件も取得できませんでした（取得元の障害か仕様変更の可能性）';
 
-  if (published.length > 0) {
-    await notify({
-      webhookUrl,
-      embeds: [
-        {
-          title: `🚀 記事を公開しました（${published.length}件）`,
-          description: (buildPublishNotification(published) + failureLine + quotaLine).slice(
-            0,
-            EMBED_DESCRIPTION_LIMIT
-          ),
-          color: 0x22c55e,
-        },
-      ],
-    });
-    return;
+  const main: Omit<Delivery, 'webhookUrl'> =
+    published.length > 0
+      ? {
+          embeds: [
+            {
+              title: `🚀 記事を公開しました（${published.length}件）`,
+              description: clip(buildPublishNotification(published) + failureLine + quotaLine),
+              color: 0x22c55e,
+            },
+          ],
+        }
+      : failed.length > 0
+        ? {
+            embeds: [
+              {
+                title: `⚠️ 記事を1件も公開できませんでした（${failed.length}件失敗）`,
+                description: clip(buildFailureReport(failed) + quotaLine),
+                color: 0xef4444,
+              },
+            ],
+          }
+        : trends === 0
+          ? { content: noTrends }
+          : { content: `🈳 新規トレンドなし（取得${trends}件・すべて既出）` };
+
+  // A partial failure is invisible on the main channel -- it rides along at the
+  // bottom of a green "published" embed -- so it is exactly what this channel
+  // is for, and the title has to say the run was not a total loss.
+  const errors: Omit<Delivery, 'webhookUrl'> | null =
+    failed.length > 0
+      ? {
+          embeds: [
+            {
+              title:
+                published.length > 0
+                  ? `⚠️ ${failed.length}件の生成に失敗（${published.length}件は公開）`
+                  : `⚠️ 記事を1件も公開できませんでした（${failed.length}件失敗）`,
+              description: clip(buildFailureReport(failed) + quotaLine),
+              color: 0xef4444,
+            },
+          ],
+        }
+      : trends === 0
+        ? { content: noTrends }
+        : null;
+
+  const deliveries: Delivery[] = [];
+  if (channels.main) deliveries.push({ webhookUrl: channels.main, ...main });
+  if (errors && channels.errors && channels.errors !== channels.main) {
+    deliveries.push({ webhookUrl: channels.errors, ...errors });
   }
+  return deliveries;
+}
 
-  if (failed.length > 0) {
-    await notify({
-      webhookUrl,
-      embeds: [
-        {
-          title: `⚠️ 記事を1件も公開できませんでした（${failed.length}件失敗）`,
-          description: (buildFailureReport(failed) + quotaLine).slice(0, EMBED_DESCRIPTION_LIMIT),
-          color: 0xef4444,
-        },
-      ],
-    });
-    return;
+async function report(channels: Channels, outcome: RunOutcome): Promise<void> {
+  for (const delivery of planReport(channels, outcome)) {
+    await sendDiscordNotification(delivery);
+    console.log('Discord notification sent');
   }
+}
 
-  if (trends === 0) {
-    await notify({
-      webhookUrl,
-      content: '⚠️ トレンドを1件も取得できませんでした（取得元の障害か仕様変更の可能性）',
-    });
-    return;
-  }
+/** Reads both webhooks once, so main() and the crash handler cannot disagree. */
+export function channelsFromEnv(env: NodeJS.ProcessEnv = process.env): Channels {
+  return { main: env.DISCORD_WEBHOOK_URL, errors: env.DISCORD_ERROR_WEBHOOK_URL };
+}
 
-  await notify({
-    webhookUrl,
-    content: `🈳 新規トレンドなし（取得${trends}件・すべて既出）`,
-  });
+/** The distinct webhooks a failure should reach. Never the same channel twice. */
+export function errorTargets(channels: Channels): string[] {
+  return [...new Set([channels.main, channels.errors].filter((u): u is string => !!u))];
 }
 
 /** One way of writing an article, plus whether it still has budget today. */
@@ -274,7 +318,7 @@ async function writeWithEngines(trend: TrendItem, engines: Engine[]) {
 }
 
 async function main() {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+  const channels = channelsFromEnv();
 
   console.log('Fetching trends...');
   const trends = await fetchTrends();
@@ -330,7 +374,7 @@ async function main() {
 
   // Reaching here with nothing published and nothing failed means dedup left
   // no candidates: rankTrends only shrinks a non-empty list.
-  await report(webhookUrl, { published, failed, trends: trends.length, quotaExhausted });
+  await report(channels, { published, failed, trends: trends.length, quotaExhausted });
 
   // A batch where every article failed is a failed run, and cron should see a
   // non-zero exit. Set the code rather than throwing: report() has already
@@ -347,18 +391,13 @@ async function main() {
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   main().catch(async (err) => {
     console.error('Generation failed:', err);
-    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-    if (webhookUrl) {
-      await sendDiscordNotification({
-        webhookUrl,
-        embeds: [
-          {
-            title: '⚠️ 記事生成が異常終了しました',
-            description: `\`\`\`\n${redactSecrets(String(err instanceof Error ? err.stack || err.message : err)).slice(0, 1500)}\n\`\`\``,
-            color: 0xef4444,
-          },
-        ],
-      });
+    const embed: DiscordEmbed = {
+      title: '⚠️ 記事生成が異常終了しました',
+      description: `\`\`\`\n${redactSecrets(String(err instanceof Error ? err.stack || err.message : err)).slice(0, 1500)}\n\`\`\``,
+      color: 0xef4444,
+    };
+    for (const webhookUrl of errorTargets(channelsFromEnv())) {
+      await sendDiscordNotification({ webhookUrl, embeds: [embed] });
     }
     process.exit(1);
   });
