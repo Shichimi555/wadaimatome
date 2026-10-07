@@ -74,7 +74,15 @@ if git diff --staged --quiet; then
   exit 0
 fi
 
-git commit -q -m "chore: auto-generate trending articles $(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+# 記事コミットは bot 名義にする。ホストの git 設定に依存させず、ここで明示する。
+# オーナーのアカウントのメールで author にすると、1日24本の自動コミットが
+# そのまま contribution graph に積まれて、人間の作業が埋もれる。
+# （41898282 は GitHub Actions bot の実 ID。これが付いていないとアイコンが出ない）
+BOT_NAME='github-actions[bot]'
+BOT_EMAIL='41898282+github-actions[bot]@users.noreply.github.com'
+
+git -c "user.name=$BOT_NAME" -c "user.email=$BOT_EMAIL" \
+  commit -q -m "chore: auto-generate trending articles $(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   || abort "git commit に失敗しました。"
 
 # コミットは残す。push だけ落ちたなら次回の実行がまとめて押し上げる。
